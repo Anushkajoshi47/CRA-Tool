@@ -142,7 +142,7 @@ function ComplianceJourney({ products, items }) {
       <div style={{ display: 'flex', alignItems: 'center' }}>
         {stages.map((stage, i) => {
           const isActive = !stage.done && (i === 0 || stages[i - 1].done);
-          const nodeColor  = stage.done ? '#00e676' : isActive ? '#00c8c8' : '#1e1e2e';
+          // nodeColor unused — styling via borderCol/nodeBg/textColor below
           const borderCol  = stage.done ? '#00e676' : isActive ? '#00c8c8' : '#2c2c40';
           const nodeBg     = stage.done ? 'rgba(0,230,118,0.12)' : isActive ? 'rgba(0,200,200,0.1)' : 'rgba(30,30,46,0.8)';
           const textColor  = stage.done ? '#00e676' : isActive ? '#00c8c8' : 'var(--text-3)';
