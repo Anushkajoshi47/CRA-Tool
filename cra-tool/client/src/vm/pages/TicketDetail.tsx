@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getTicket, getTicketHistory, getTicketNotifications, getReports, getAdvisories } from '../api/vmApi';
+import { getTicket, getTicketHistory, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport } from '../api/vmApi';
+import ConfirmDialog from '../../shared/ConfirmDialog';
 import StatusBadge from '../components/StatusBadge';
 import ClockWidget from '../components/ClockWidget';
 import WorkflowChecklist from '../components/WorkflowChecklist';
@@ -29,6 +30,20 @@ export default function TicketDetail() {
   const [tab,     setTab]           = useState('workflow');
   const [loading, setLoading]       = useState(true);
   const [showReportForm, setShowReportForm] = useState(false);
+  const [editingReport, setEditingReport]   = useState(null);
+  const [deletingReport, setDeletingReport] = useState(null);
+
+  async function markSubmitted(report) {
+    await updateReport(report._id, { submittedAt: new Date().toISOString() });
+    load();
+  }
+
+  async function removeReport() {
+    if (!deletingReport) return;
+    await deleteReport(deletingReport._id);
+    setDeletingReport(null);
+    load();
+  }
 
   const load = useCallback(async () => {
     try {
@@ -206,11 +221,12 @@ export default function TicketDetail() {
       {/* Reports */}
       {tab === 'reports' && (
         <div>
-          {showReportForm ? (
+          {showReportForm || editingReport ? (
             <ReportForm
               ticket={ticket}
-              onSaved={() => { setShowReportForm(false); load(); }}
-              onCancel={() => setShowReportForm(false)}
+              existingReport={editingReport}
+              onSaved={() => { setShowReportForm(false); setEditingReport(null); load(); }}
+              onCancel={() => { setShowReportForm(false); setEditingReport(null); }}
             />
           ) : (
             <>
@@ -250,6 +266,26 @@ export default function TicketDetail() {
                       <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
                         {r.content}
                       </p>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
+                        <button className="btn btn-ghost btn-xs" onClick={() => setEditingReport(r)}>
+                          Edit
+                        </button>
+                        {!r.submittedAt && (
+                          <button className="btn btn-primary btn-xs" onClick={() => markSubmitted(r)}>
+                            Mark as Submitted
+                          </button>
+                        )}
+                        {!r.submittedAt && (
+                          <button className="btn btn-danger btn-xs" onClick={() => setDeletingReport(r)}>
+                            Delete
+                          </button>
+                        )}
+                        {r.submittedAt && (
+                          <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto' }}>
+                            Submitted {new Date(r.submittedAt).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -258,6 +294,15 @@ export default function TicketDetail() {
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={!!deletingReport}
+        title="Delete report draft?"
+        message={deletingReport ? `The ${deletingReport.type} report draft will be permanently removed.` : ''}
+        confirmLabel="Delete"
+        danger
+        onConfirm={removeReport}
+        onCancel={() => setDeletingReport(null)}
+      />
     </div>
   );
 }
