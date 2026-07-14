@@ -32,15 +32,12 @@ export default function Products() {
   const navigate                = useNavigate();
 
   useEffect(() => {
-    api.get('/products').then(async r => {
-      const prods = r.data;
-      setProducts(prods);
+    api.get('/requirements/summary/all').then(r => {
+      setProducts(r.data.products);
       const map = {};
-      await Promise.all(prods.map(async p => {
-        const res = await api.get(`/requirements/${p._id}`);
-        const its = res.data;
-        map[p._id] = its.length ? Math.round((its.filter(i => i.status === 'done').length / its.length) * 100) : 0;
-      }));
+      Object.entries(r.data.itemsByProduct).forEach(([pid, its]: any) => {
+        map[pid] = its.length ? Math.round((its.filter(i => i.status === 'done').length / its.length) * 100) : 0;
+      });
       setScores(map);
       setLoading(false);
     }).catch(() => setLoading(false));

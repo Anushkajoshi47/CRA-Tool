@@ -333,15 +333,9 @@ export default function Dashboard() {
   const enforceD                = daysUntil(ENFORCE_DL);
 
   useEffect(() => {
-    api.get('/products').then(async res => {
-      const prods = res.data;
-      setProducts(prods);
-      const map = {};
-      await Promise.all(prods.map(async p => {
-        const r = await api.get(`/requirements/${p._id}`);
-        map[p._id] = r.data;
-      }));
-      setItems(map);
+    api.get('/requirements/summary/all').then(res => {
+      setProducts(res.data.products);
+      setItems(res.data.itemsByProduct);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);

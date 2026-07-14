@@ -15,6 +15,48 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// One-call dashboard summary: every product of the user with its compliance
+// items (light fields only — no legal text). Replaces the N-per-product
+// fetch pattern that made the dashboard slow on remote backends.
+router.get('/summary/all', auth, async (req, res) => {
+  try {
+    const products = await Product.find({ userId: req.user.userId }).sort({ createdAt: -1 }).lean();
+    const pids = products.map(p => p._id);
+
+    const [reqs, items] = await Promise.all([
+      Requirement.find({}, 'title articleRef pillar sortOrder').sort({ sortOrder: 1 }).lean(),
+      ComplianceItem.find({ productId: { $in: pids } }).lean(),
+    ]);
+
+    const reqMap = {};
+    reqs.forEach(r => { reqMap[r._id.toString()] = r; });
+
+    const itemsByProduct = {};
+    products.forEach(p => { itemsByProduct[p._id.toString()] = []; });
+    items.forEach(ci => {
+      const r      = reqMap[ci.requirementId.toString()];
+      const bucket = itemsByProduct[ci.productId.toString()];
+      if (!r || !bucket) return;
+      bucket.push({
+        itemId:     ci._id,
+        reqId:      ci.requirementId,
+        title:      r.title,
+        articleRef: r.articleRef,
+        pillar:     r.pillar,
+        sortOrder:  r.sortOrder,
+        status:     ci.status,
+        notes:      ci.notes,
+        updatedAt:  ci.updatedAt,
+      });
+    });
+    Object.values(itemsByProduct).forEach((arr: any) => arr.sort((a, b) => a.sortOrder - b.sortOrder));
+
+    res.json({ products, itemsByProduct });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 router.get('/:productId', auth, async (req, res) => {
   try {
     const product = await Product.findOne({ _id: req.params.productId, userId: req.user.userId });
