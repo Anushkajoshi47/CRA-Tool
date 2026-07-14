@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getTickets } from '../api/vmApi';
 import StatusBadge from '../components/StatusBadge';
 import { computeDeadlines, timeRemaining } from '../utils/clockCalculations';
+import { exportCsv } from '../../shared/exportCsv';
 
 const CLOSED_STATES = new Set(['closed', 'invalid', 'not_reproducible', 'not_exploitable', 'not_verified']);
 
@@ -30,7 +31,27 @@ export default function TicketQueue() {
           <div className="section-label" style={{ marginBottom: 6 }}>Vulnerability Management</div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Ticket Queue</h1>
         </div>
-        <Link to="/vm/tickets/new" className="btn btn-primary">+ Log Vulnerability</Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={visible.length === 0}
+            onClick={() => exportCsv(`psirt-tickets-${new Date().toISOString().slice(0, 10)}`, visible.map(t => ({
+              Ticket: t.ticketNumber,
+              Status: t.status.replace(/_/g, ' '),
+              'Case Type': t.isIncident ? 'incident' : 'vulnerability',
+              'Affected Products': (t.affectedProducts || []).map(p => [p.name, p.version].filter(Boolean).join(' ')).join('; '),
+              Source: t.sourceChannel,
+              'Case Manager': t.caseManager || '',
+              'Actively Exploited': t.activelyExploited ? 'yes' : 'no',
+              'CRA Clock Started': t.clockStartedAt || '',
+              Created: t.createdAt,
+              Updated: t.updatedAt,
+            })))}
+          >
+            ⬇ Export CSV
+          </button>
+          <Link to="/vm/tickets/new" className="btn btn-primary">+ Log Vulnerability</Link>
+        </div>
       </div>
 
       {/* Summary */}

@@ -175,7 +175,7 @@ select option {
 .mono         { font-family: var(--mono); }
 .urgent-pulse { animation: urgentPulse 2s ease-in-out infinite; }
 .section-label {
-  font-size: 11px; font-weight: 700; color: var(--text-2);
+  font-size: 11.5px; font-weight: 700; color: var(--text-2);
   text-transform: uppercase; letter-spacing: 0.12em;
 }
 .divider { height: 1px; background: var(--border); }
@@ -204,14 +204,14 @@ select option {
   box-shadow: 0 0 20px rgba(0,200,200,0.28), 0 4px 12px rgba(0,0,0,0.4);
 }
 .nav-section-label {
-  font-size: 9px; font-weight: 700; color: var(--text-3);
+  font-size: 10px; font-weight: 700; color: var(--text-3);
   text-transform: uppercase; letter-spacing: 0.16em;
   padding: 14px 12px 6px;
 }
 .nav-link {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 12px; border-radius: var(--radius-sm); margin-bottom: 2px;
-  font-size: 13px; color: var(--text-2); font-weight: 500;
+  font-size: 13.5px; color: var(--text-2); font-weight: 500;
   text-decoration: none;
   border-left: 2px solid transparent;
   transition: all 150ms ease;
@@ -331,7 +331,7 @@ select option {
 .pill {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 10px; border-radius: 20px;
-  font-size: 10.5px; font-weight: 600;
+  font-size: 11px; font-weight: 600;
   transition: all 150ms ease; white-space: nowrap;
 }
 .pill-pending      { background: rgba(110,110,138,0.1); color: var(--text-2); border: 1px solid rgba(110,110,138,0.2); }
@@ -345,7 +345,7 @@ select option {
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th {
   text-align: left; padding: 12px 20px;
-  font-size: 10px; font-weight: 700; color: var(--text-2);
+  font-size: 11px; font-weight: 700; color: var(--text-2);
   text-transform: uppercase; letter-spacing: 0.12em;
   border-bottom: 1px solid var(--border);
 }
@@ -425,3 +425,20 @@ select option {
   .matrix-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
 }
 @media (min-width: 769px) { .mobile-nav { display: none !important; } }
+
+/* ── Print (advisories / reports → PDF) ─────────────────────── */
+@media print {
+  :root {
+    --bg: #ffffff; --sidebar-bg: #ffffff; --card: #ffffff; --card-hi: #f2f2f2;
+    --border: #d5d9de; --border-hi: #b7bec7;
+    --text: #111827; --text-2: #374151; --text-3: #6b7280;
+    --accent: #0f766e; --accent-dim: rgba(15,118,110,0.06);
+    --grid-line: transparent; --glow-a: transparent; --glow-b: transparent;
+    --shadow-card: none; --shadow-card-lg: none;
+  }
+  body { background: #fff !important; background-image: none !important; }
+  body::before, body::after { display: none !important; }
+  .sidebar, .mobile-nav, .btn, .no-print, footer { display: none !important; }
+  .app-shell { margin-left: 0 !important; }
+  .card { break-inside: avoid; box-shadow: none !important; }
+}

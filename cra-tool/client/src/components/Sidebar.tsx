@@ -45,7 +45,7 @@ export default function Sidebar() {
               CRA Comply
             </div>
             <div style={{ fontSize: '9.5px', color: 'var(--text-2)', fontWeight: 500, letterSpacing: '0.04em', marginTop: '2px' }}>
-              Innomotics GH180
+              {localStorage.getItem('orgName') || 'Innomotics GH180'}
             </div>
           </div>
         </Link>

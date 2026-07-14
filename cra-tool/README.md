@@ -1,16 +1,21 @@
 # CRA Comply
 
-Full-stack compliance tracking tool for the **Innomotics Perfect Harmony GH180** medium voltage drive under the **EU Cyber Resilience Act (CRA)**.
+Full-stack platform for **EU Cyber Resilience Act (CRA)** product compliance and **PSIRT vulnerability management**, built for the Innomotics Perfect Harmony GH180 medium-voltage drive product line.
+
+Two modules in one workspace:
+
+1. **CRA Compliance** — track all 31 CRA requirements per product with evidence, status, and live deadline countdowns.
+2. **Vulnerability Management** — a guided PSIRT case workflow implementing the VDMA *CRA Vulnerability Handling Guideline* (Figure 7 process graph) and the CRA **Article 14** reporting obligations (24-hour early warning, 72-hour notification, final report).
 
 ---
 
 ## Stack
 
-- **Frontend** — React 18 (Create React App), React Router v6, Axios
-- **Backend** — Node.js, Express 4
+- **Frontend** — React 18 (Create React App) + **TypeScript**, React Router v6, Axios
+- **Backend** — Node.js, Express 4 + **TypeScript** (ts-node in dev, compiled `dist/` in production)
 - **Database** — MongoDB Atlas (Mongoose)
 - **Auth** — JWT + bcryptjs
-- **Styling** — Inline styles, Space Grotesk + Inter fonts, no UI library
+- **Styling** — CSS design tokens + inline styles (see *UI Architecture* below)
 
 ---
 
@@ -18,38 +23,34 @@ Full-stack compliance tracking tool for the **Innomotics Perfect Harmony GH180**
 
 ```
 cra-tool/
-├── client/                      React frontend
-│   ├── public/
-│   │   └── index.html
+├── client/                        React + TS frontend
 │   └── src/
-│       ├── api.js               Axios instance with JWT interceptor
-│       ├── App.js               Router + protected/public route guards
-│       ├── index.js
-│       ├── components/
-│       │   └── Navbar.jsx
-│       ├── pages/
-│       │   ├── Login.jsx
-│       │   ├── Signup.jsx
-│       │   ├── Dashboard.jsx
-│       │   ├── ProductForm.jsx
-│       │   └── Requirements.jsx
-│       └── styles/
-│           └── index.css
-└── server/                      Express backend
-    ├── .env                     Environment variables (not committed)
-    ├── index.js                 App entry point
-    ├── seed.js                  One-time database seeder (31 requirements)
-    ├── middleware/
-    │   └── auth.js              JWT verification middleware
-    ├── models/
-    │   ├── User.js
-    │   ├── Product.js
-    │   ├── Requirement.js
-    │   └── ComplianceItem.js
-    └── routes/
-        ├── auth.js              POST /register, POST /login
-        ├── products.js          GET / POST / DELETE /products
-        └── requirements.js      GET / PATCH compliance items
+│       ├── api.ts                 Axios instance with JWT interceptor
+│       ├── App.tsx                Router, shells, route guards
+│       ├── types.ts               Shared domain types (Ticket, Report, Advisory…)
+│       ├── pages/                 CRA module + auth + settings pages
+│       ├── components/            CRA sidebar
+│       ├── shared/                Theme, dialogs, footer, title manager, CSV export
+│       │   ├── theme.ts           Dark/light mode (localStorage + data-theme)
+│       │   └── layout/            VM sidebar, module switcher
+│       ├── styles/index.css       Design tokens — dark & light palettes
+│       └── vm/                    Vulnerability Management module
+│           ├── api/vmApi.ts       Typed API layer
+│           ├── components/        Workflow tracker, clocks, advisory form…
+│           ├── pages/             VM dashboard, ticket queue/detail, advisories
+│           └── utils/             Deadline math, flow phases
+└── server/                        Express + TS backend
+    ├── index.ts                   App entry
+    ├── seed.ts                    Seeds the 31 CRA requirements
+    ├── types.d.ts                 Express Request augmentation (req.user)
+    ├── middleware/auth.ts         JWT verification
+    ├── models/                    User, Product, Requirement, ComplianceItem,
+    │                              Ticket, StatusHistory, Notification, Report, Advisory
+    ├── controllers/               VM ticket / report / advisory logic
+    ├── services/
+    │   ├── stateMachine.ts        VDMA Figure 7 ticket state machine (19 states)
+    │   └── clockService.ts        CRA Art. 14 deadline computation
+    └── routes/                    auth, products, requirements, vm/*
 ```
 
 ---
@@ -59,93 +60,111 @@ cra-tool/
 ### Prerequisites
 
 - Node.js 18+
-- A [MongoDB Atlas](https://www.mongodb.com/atlas) account and cluster
+- A [MongoDB Atlas](https://www.mongodb.com/atlas) cluster
 
-### 1. Configure environment variables
+### 1. Environment variables
 
-Edit `server/.env`:
+Create `server/.env`:
 
 ```env
-MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<dbname>?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/<dbname>?retryWrites=true&w=majority
 JWT_SECRET=replace-with-a-long-random-secret
 PORT=5000
 ```
 
-To get your Atlas URI: Atlas dashboard → cluster → **Connect** → **Drivers** → copy the string and replace `<password>`.
+> The database name in the URI matters — omitting it silently uses the `test` database.
 
-### 2. Install dependencies
+### 2. Install
 
 ```bash
-# Backend
-cd cra-tool/server
-npm install
-
-# Frontend
-cd ../client
-npm install
+cd cra-tool/server && npm install
+cd ../client && npm install
 ```
 
-### 3. Seed the database
-
-Run once to insert all 31 CRA requirements:
+### 3. Seed the 31 CRA requirements (once)
 
 ```bash
 cd cra-tool/server
-node seed.js
+npm run seed
 ```
 
-### 4. Start the backend
+### 4. Run (two terminals)
 
 ```bash
+# Backend — nodemon + ts-node on :5000
 cd cra-tool/server
-node index.js
-```
+npm run dev
 
-Runs on `http://localhost:5000`
-
-### 5. Start the frontend
-
-```bash
+# Frontend — CRA dev server on :3000
 cd cra-tool/client
 npm start
 ```
 
-Opens at `http://localhost:3000`
+### Production build
+
+```bash
+# Server: compile to dist/ then run
+npm run build && npm start        # (start = node dist/index.js)
+
+# Client
+npm run build                     # static build/ for Vercel etc.
+```
 
 ---
 
 ## API Reference
 
-### Auth
+All routes except register/login require `Authorization: Bearer <token>`.
 
-| Method | Endpoint | Body | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | `{ email, password }` | Create account, returns JWT |
-| POST | `/api/auth/login` | `{ email, password }` | Login, returns JWT |
-
-All routes below require `Authorization: Bearer <token>`.
-
-### Products
+### Auth & Profile
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/products` | List all products for the logged-in user |
-| POST | `/api/products` | Create product + auto-generate 31 compliance items |
-| DELETE | `/api/products/:id` | Delete product and all its compliance items |
+| POST | `/api/auth/register` | Create account → JWT |
+| POST | `/api/auth/login` | Login → JWT |
+| GET | `/api/auth/me` | Profile (email, name, orgName) |
+| PATCH | `/api/auth/me` | Update name/orgName; change password (verifies current) |
 
-### Requirements / Compliance Items
+### Products & Compliance
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/requirements` | List all 31 raw requirements |
-| GET | `/api/requirements/:productId` | Get compliance items for a product (populated) |
-| PATCH | `/api/requirements/item/:itemId` | Update `status`, `notes`, or `evidenceDescription` |
+| GET | `/api/products` | User's products |
+| POST | `/api/products` | Create product + 31 compliance items |
+| PATCH | `/api/products/:id` | Edit product fields |
+| DELETE | `/api/products/:id` | Delete product + its compliance items |
+| GET | `/api/requirements` | The 31 raw requirements |
+| GET | `/api/requirements/summary/all` | **One-call dashboard payload** — all products + light compliance items |
+| GET | `/api/requirements/:productId` | Compliance items for one product |
+| PATCH | `/api/requirements/item/:itemId` | Update status / notes / evidence |
+
+### Vulnerability Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST | `/api/vm/tickets` | List / create tickets (`PSIRT-YYYY-NNNN`) |
+| GET/PATCH | `/api/vm/tickets/:id` | Read / edit ticket fields |
+| POST | `/api/vm/tickets/:id/transition` | Advance the workflow (validated by the state machine) |
+| GET | `/api/vm/tickets/:id/history` | Audit trail |
+| GET | `/api/vm/tickets/:id/notifications` | Standard responses logged to finder / users / authority |
+| GET/POST/PATCH/DELETE | `/api/vm/reports` | ENISA report drafts (24h / 72h / final) with due dates |
+| GET/POST/PATCH | `/api/vm/advisories` | Security advisories (draft → auto-published on transition) |
+
+---
+
+## The VM Workflow (VDMA Figure 7)
+
+Tickets move through a 19-state machine — server-enforced in `services/stateMachine.ts`:
+
+- **Intake → Validation → Report-type triage** — an *actively-exploited* claim branches to urgent verification
+- **Confirming active exploitation starts the CRA clock** (`clockStartedAt`): 24h early warning and 72h notification to ENISA; final report due 14 days after mitigation (1 month after notification for incidents)
+- **Remediation loop** — root cause → develop → deploy → residual-risk assessment, looping until acceptable
+- **Disclosure** — advisory drafted and published; researcher acknowledged per the PCERT standard responses
+- Five terminal exits (invalid / not reproducible / not exploitable (VEX) / not verified / closed), each auto-logging the researcher notification with the case manager's reason
 
 ---
 
 ## CRA Requirements Coverage
-
-The seed script inserts 31 requirements across four pillars:
 
 | Pillar | Source | Count |
 |--------|--------|-------|
@@ -155,47 +174,17 @@ The seed script inserts 31 requirements across four pillars:
 | Documentation | Annex VII | 6 |
 | **Total** | | **31** |
 
-Article 14 items are flagged `urgent: true` and display an **⚡ Sept 2026** badge — the reporting deadline is 11 September 2026, ahead of full enforcement on 11 December 2027.
+Key deadlines: **11 Sep 2026** (Article 14 reporting obligations) · **11 Dec 2027** (full enforcement).
 
 ---
 
-## CRA Classification Logic
+## UI Architecture
 
-On product creation the app applies a simplified classification:
+Deliberately **zero UI dependencies** — no component library, no CSS framework:
 
-| Condition | Result |
-|-----------|--------|
-| `soldInEU = false` | Error — CRA does not apply |
-| `hasNetworkInterface = false` | Warning — product may be out of scope |
-| All other cases | **Default Class** — Module A self-certification |
-
-The GH180 is not listed in CRA Annex III, so it falls into the Default Class. No notified body is required; Innomotics conducts its own conformity assessment and issues a Declaration of Conformity.
-
----
-
-## Key Deadlines
-
-| Date | Milestone |
-|------|-----------|
-| 11 September 2026 | Vulnerability and incident reporting obligations begin (Article 14) |
-| 11 December 2027 | Full CRA enforcement — all Annex I requirements apply |
-
----
-
-## Design Tokens
-
-| Token | Value |
-|-------|-------|
-| Background | `#07070f` |
-| Card | `#0f0f1a` |
-| Border | `#22223a` |
-| Accent | `#3b82f6` |
-| Urgent / Warning | `#f97316` |
-| Success | `#34d399` |
-| Text | `#e8e8f0` |
-| Muted | `#6b6b8a` |
-| Heading font | Space Grotesk |
-| Body font | Inter |
+- All colors, shadows, and surfaces are **CSS custom properties** in `styles/index.css`, defined twice: the dark palette on `:root`, the corporate light palette on `:root[data-theme="light"]`. The theme toggle just flips one attribute; every component styles through tokens.
+- Components use inline styles referencing those tokens. Trade-off, made knowingly: no library lock-in, no version churn, tiny bundle (~106 kB gzipped total), full control over the compliance-specific visuals (workflow tracker, deadline clocks, lifecycle journey) that no library provides. The cost is verbosity — accepted for a tool of this size.
+- Print styles turn advisories/reports into clean PDF output (`Ctrl+P`); CSV export is dependency-free (`shared/exportCsv.ts`).
 
 ---
 

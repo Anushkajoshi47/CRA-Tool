@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
+import { exportCsv } from '../shared/exportCsv';
 
 const PILLARS = ['All', 'Security Properties', 'Vulnerability Handling', 'Incident Reporting', 'Documentation'];
 const PILLAR_CFG = {
@@ -67,6 +68,20 @@ export default function Requirements() {
           ))}
         </div>
         <div style={{ flex: 1 }} />
+        <button
+          className="btn btn-ghost btn-sm"
+          disabled={filtered.length === 0}
+          onClick={() => exportCsv(`cra-requirements-${new Date().toISOString().slice(0, 10)}`, filtered.map(r => ({
+            'Article Ref': r.articleRef,
+            Pillar: r.pillar,
+            Title: r.title,
+            Summary: r.plainEnglish,
+            Urgent: r.urgent ? 'yes' : 'no',
+            'Evidence Required': (r.evidenceRequired || []).join('; '),
+          })))}
+        >
+          ⬇ Export CSV
+        </button>
         <span className="mono" style={{ fontSize: '10px', color: 'var(--text-3)' }}>{filtered.length} items</span>
       </div>
 

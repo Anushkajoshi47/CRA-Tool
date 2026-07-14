@@ -26,6 +26,7 @@ export default function Settings() {
 /* ── Profile ─────────────────────────────────────────────────── */
 function ProfileSection() {
   const [name, setName]       = useState('');
+  const [orgName, setOrgName] = useState('');
   const [email, setEmail]     = useState('');
   const [saving, setSaving]   = useState(false);
   const [message, setMessage] = useState('');
@@ -33,7 +34,7 @@ function ProfileSection() {
 
   useEffect(() => {
     api.get('/auth/me')
-      .then(r => { setName(r.data.name || ''); setEmail(r.data.email); })
+      .then(r => { setName(r.data.name || ''); setOrgName(r.data.orgName || ''); setEmail(r.data.email); })
       .catch(() => {});
   }, []);
 
@@ -41,8 +42,9 @@ function ProfileSection() {
     e.preventDefault();
     setSaving(true); setMessage(''); setError('');
     try {
-      const { data } = await api.patch('/auth/me', { name });
+      const { data } = await api.patch('/auth/me', { name, orgName });
       localStorage.setItem('name', data.name || '');
+      localStorage.setItem('orgName', data.orgName || '');
       setMessage('Profile saved.');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to save profile');
@@ -52,7 +54,7 @@ function ProfileSection() {
   }
 
   return (
-    <Section title="Profile" subtitle="Your display name is shown in the sidebar and audit trail.">
+    <Section title="Profile" subtitle="Your display name is shown in the sidebar and audit trail. The organization line appears under the logo.">
       <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <div>
@@ -63,6 +65,10 @@ function ProfileSection() {
             <label className="label">Email</label>
             <input className="input" value={email} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
           </div>
+        </div>
+        <div>
+          <label className="label">Organization / Product Line</label>
+          <input className="input" value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="e.g. Innomotics GH180" />
         </div>
         <Feedback message={message} error={error} />
         <div>

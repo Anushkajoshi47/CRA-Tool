@@ -17,13 +17,16 @@ import ProductForm from './pages/ProductForm';
 import Compliance from './pages/Compliance';
 import Requirements from './pages/Requirements';
 import Settings from './pages/Settings';
+import TitleManager from './shared/TitleManager';
+import AppFooter from './shared/AppFooter';
 
 function AppShell({ children }) {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar />
-      <main className="app-shell" style={{ flex: 1 }}>
-        {children}
+      <main className="app-shell" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1 }}>{children}</div>
+        <AppFooter />
       </main>
     </div>
   );
@@ -51,8 +54,9 @@ function VmShell({ children }) {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <VmSidebar />
-      <main className="app-shell" style={{ flex: 1 }}>
-        {children}
+      <main className="app-shell" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1 }}>{children}</div>
+        <AppFooter />
       </main>
     </div>
   );
@@ -67,6 +71,7 @@ function VmRoute({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <TitleManager />
       <Routes>
         <Route path="/"                     element={<Home />} />
         <Route path="/login"                element={<PublicRoute><Login /></PublicRoute>} />

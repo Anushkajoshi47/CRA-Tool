@@ -20,6 +20,7 @@ export default function Signup() {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('email', res.data.email);
       localStorage.setItem('name', res.data.name || '');
+      localStorage.setItem('orgName', res.data.orgName || '');
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');

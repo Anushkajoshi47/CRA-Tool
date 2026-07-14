@@ -4,6 +4,7 @@ import { getTickets, getAdvisories } from '../api/vmApi';
 import StatusBadge from '../components/StatusBadge';
 import { computeDeadlines, timeRemaining } from '../utils/clockCalculations';
 import { PHASES, phaseOf } from '../utils/flowPhases';
+import LifecycleJourney from '../components/LifecycleJourney';
 
 const TERMINAL = new Set(['closed', 'invalid', 'not_reproducible', 'not_exploitable', 'not_verified']);
 
@@ -63,6 +64,9 @@ export default function VmDashboard() {
         </div>
         <Link to="/vm/tickets/new" className="btn btn-primary">+ Log Vulnerability</Link>
       </div>
+
+      {/* Lifecycle journey — static process education */}
+      <LifecycleJourney />
 
       {/* KPI cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 28 }}>

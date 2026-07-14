@@ -17,11 +17,16 @@ export default function VmSidebar() {
   const { email, name, logout } = useAuth();
   const initial                 = name[0]?.toUpperCase() || 'U';
 
-  // Exact match for /vm (dashboard) and /new so they don't bleed into other routes
-  const isActive = (p) =>
-    p === '/vm' || p === '/vm/tickets/new'
-      ? location.pathname === p
-      : location.pathname === p || location.pathname.startsWith(p + '/');
+  // Exact match for /vm (dashboard) and /new so they don't bleed into other
+  // routes; Ticket Queue claims /vm/tickets/* EXCEPT /new (Log Vulnerability's).
+  const isActive = (p) => {
+    if (p === '/vm' || p === '/vm/tickets/new') return location.pathname === p;
+    if (p === '/vm/tickets') {
+      return location.pathname === p ||
+        (location.pathname.startsWith(p + '/') && location.pathname !== '/vm/tickets/new');
+    }
+    return location.pathname === p || location.pathname.startsWith(p + '/');
+  };
 
   return (
     <>
@@ -39,7 +44,7 @@ export default function VmSidebar() {
               CRA Comply
             </div>
             <div style={{ fontSize: 9.5, color: 'var(--text-2)', fontWeight: 500, letterSpacing: '0.04em', marginTop: 2 }}>
-              Innomotics GH180
+              {localStorage.getItem('orgName') || 'Innomotics GH180'}
             </div>
           </div>
         </Link>

@@ -22,7 +22,7 @@ router.post('/register', async (req, res) => {
       expiresIn: '7d',
     });
 
-    res.status(201).json({ token, email: user.email, name: user.name || '' });
+    res.status(201).json({ token, email: user.email, name: user.name || '', orgName: user.orgName || '' });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -44,7 +44,7 @@ router.post('/login', async (req, res) => {
       expiresIn: '7d',
     });
 
-    res.json({ token, email: user.email, name: user.name || '' });
+    res.json({ token, email: user.email, name: user.name || '', orgName: user.orgName || '' });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
 // ── Profile (Settings page) ──────────────────────────────────
 router.get('/me', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('email name createdAt');
+    const user = await User.findById(req.user.userId).select('email name orgName createdAt');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (err) {
@@ -67,9 +67,10 @@ router.patch('/me', auth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const { name, currentPassword, newPassword } = req.body;
+    const { name, orgName, currentPassword, newPassword } = req.body;
 
     if (name !== undefined) user.name = String(name).trim();
+    if (orgName !== undefined) user.orgName = String(orgName).trim();
 
     if (newPassword) {
       if (!currentPassword)
@@ -82,7 +83,7 @@ router.patch('/me', auth, async (req, res) => {
     }
 
     await user.save();
-    res.json({ email: user.email, name: user.name });
+    res.json({ email: user.email, name: user.name, orgName: user.orgName || '' });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }

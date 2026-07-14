@@ -16,6 +16,7 @@ export default function Login() {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('email', res.data.email);
       localStorage.setItem('name', res.data.name || '');
+      localStorage.setItem('orgName', res.data.orgName || '');
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid credentials. Please try again.');

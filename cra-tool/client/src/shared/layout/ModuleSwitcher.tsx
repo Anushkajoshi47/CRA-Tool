@@ -40,7 +40,7 @@ export default function ModuleSwitcher() {
       gap: 2,
     }}>
       <Pill label="Compliance"   path="/cra/dashboard" active={!isVm} />
-      <Pill label="Vuln. Mgmt"   path="/vm/tickets"  active={isVm}  />
+      <Pill label="Vuln. Mgmt"   path="/vm"          active={isVm}  />
     </div>
   );
 }

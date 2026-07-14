@@ -15,9 +15,14 @@ export default function AdvisoryList() {
 
   return (
     <div style={{ padding: '32px 40px' }}>
-      <div style={{ marginBottom: 28 }}>
-        <div className="section-label" style={{ marginBottom: 6 }}>Vulnerability Management</div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Security Advisories</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 28 }}>
+        <div>
+          <div className="section-label" style={{ marginBottom: 6 }}>Vulnerability Management</div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Security Advisories</h1>
+        </div>
+        <button className="btn btn-ghost btn-sm no-print" disabled={advisories.length === 0} onClick={() => window.print()}>
+          🖨 Print / Save as PDF
+        </button>
       </div>
 
       {loading ? (

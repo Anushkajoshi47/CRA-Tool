@@ -11,6 +11,7 @@ export function useAuth() {
     localStorage.removeItem('token');
     localStorage.removeItem('email');
     localStorage.removeItem('name');
+    localStorage.removeItem('orgName');
     navigate('/login');
   }
 
