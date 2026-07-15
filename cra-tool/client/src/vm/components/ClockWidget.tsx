@@ -27,10 +27,13 @@ export default function ClockWidget({ clockStartedAt, mitigationDeployedAt, isIn
       padding: '16px 20px',
       marginBottom: 24,
     }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
-        ⚡ CRA Art. 14 Clock Running — started {new Date(clockStartedAt).toLocaleString()}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 10, fontWeight: 700, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="8" cy="8.5" r="5.5" /><path d="M8 5.5v3l2 1.2M6.5 1.5h3" />
+        </svg>
+        CRA Art. 14 Clock Running — started {new Date(clockStartedAt).toLocaleString()}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
         {rows.map(({ label, due }) => {
           const rem = timeRemaining(due);
           const color = !due

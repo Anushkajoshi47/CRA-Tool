@@ -3,6 +3,10 @@
 
 /* ── Design Tokens ──────────────────────────────────────────── */
 :root {
+  /* Global UI scale — component px sizes multiply by this. 100vh/100vw
+     usages must divide by it (see --full-h) or they overflow the viewport. */
+  --app-zoom:    1.1;
+  --full-h:      calc(100vh / 1.1);
   --bg:          #0a0a0f;
   --sidebar-bg:  #0d0d14;
   --card:        #111118;
@@ -93,11 +97,12 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 16px;
+  zoom: var(--app-zoom);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
+  min-height: var(--full-h);
   background-image:
     linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
@@ -111,14 +116,17 @@ body::before {
   background:
     radial-gradient(ellipse at top left, var(--glow-a) 0%, transparent 50%),
     radial-gradient(ellipse at bottom right, var(--glow-b) 0%, transparent 55%);
-  pointer-events: none; z-index: 0;
+  pointer-events: none; z-index: -1;
 }
 /* Vignette — fades grid toward edges so it doesn't compete with content */
+/* z-index -1 keeps both overlays above the body background (so they still
+   fade the grid) but strictly BELOW all content — otherwise pages without
+   their own stacking context (Home, Login) get washed out at the edges. */
 body::after {
   content: '';
   position: fixed; inset: 0;
   background: radial-gradient(ellipse at center, transparent 40%, var(--bg) 100%);
-  pointer-events: none; z-index: 0;
+  pointer-events: none; z-index: -1;
 }
 a { color: var(--accent); text-decoration: none; }
 button { cursor: pointer; font-family: var(--sans); }
@@ -234,7 +242,7 @@ select option {
   font-size: 13px; font-weight: 700; color: #fff;
   font-family: var(--mono);
 }
-.app-shell { margin-left: var(--sidebar-w); min-height: 100vh; position: relative; z-index: 1; }
+.app-shell { margin-left: var(--sidebar-w); min-height: var(--full-h); position: relative; z-index: 1; }
 
 /* ── Cards ──────────────────────────────────────────────────── */
 .card {
@@ -344,12 +352,12 @@ select option {
 /* ── Data table ─────────────────────────────────────────────── */
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th {
-  text-align: left; padding: 12px 20px;
+  text-align: left; padding: 12px 14px;
   font-size: 11px; font-weight: 700; color: var(--text-2);
   text-transform: uppercase; letter-spacing: 0.12em;
   border-bottom: 1px solid var(--border);
 }
-.data-table td { padding: 16px 20px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.data-table td { padding: 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .data-table tbody tr { transition: background 120ms ease; }
 .data-table tbody tr:hover td { background: rgba(0,200,200,0.025); }
 .data-table tbody tr:last-child td { border-bottom: none; }
@@ -364,7 +372,7 @@ select option {
 /* ── Detail panel ───────────────────────────────────────────── */
 .detail-panel {
   position: fixed; top: 0; right: 0; bottom: 0;
-  width: min(500px, 100vw);
+  width: min(500px, calc(100vw / var(--app-zoom)));
   background: var(--panel-bg);
   backdrop-filter: blur(28px) saturate(160%);
   border-left: 1px solid var(--border-hi);

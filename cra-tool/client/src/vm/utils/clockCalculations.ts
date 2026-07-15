@@ -30,5 +30,7 @@ export function timeRemaining(deadline) {
   if (ms < 0) return { overdue: true, label: 'OVERDUE', hours: 0 };
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
-  return { overdue: false, label: `${h}h ${m}m`, hours: h };
+  // Above 24h, days read faster than raw hours (335h 58m → 13d 23h)
+  const label = h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : `${h}h ${m}m`;
+  return { overdue: false, label, hours: h };
 }

@@ -7,6 +7,7 @@ import NewTicketForm from './vm/pages/NewTicketForm';
 import TicketQueue from './vm/pages/TicketQueue';
 import TicketDetail from './vm/pages/TicketDetail';
 import AdvisoryList from './vm/pages/AdvisoryList';
+import VmSettings from './vm/pages/VmSettings';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -22,9 +23,9 @@ import AppFooter from './shared/AppFooter';
 
 function AppShell({ children }) {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', minHeight: 'var(--full-h)' }}>
       <Sidebar />
-      <main className="app-shell" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <main className="app-shell" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: 1 }}>{children}</div>
         <AppFooter />
       </main>
@@ -52,9 +53,9 @@ function PublicRoute({ children }) {
 
 function VmShell({ children }) {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', minHeight: 'var(--full-h)' }}>
       <VmSidebar />
-      <main className="app-shell" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <main className="app-shell" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: 1 }}>{children}</div>
         <AppFooter />
       </main>
@@ -89,6 +90,7 @@ export default function App() {
         <Route path="/vm/tickets/new"       element={<VmRoute><NewTicketForm /></VmRoute>} />
         <Route path="/vm/tickets/:id"       element={<VmRoute><TicketDetail /></VmRoute>} />
         <Route path="/vm/advisories"        element={<VmRoute><AdvisoryList /></VmRoute>} />
+        <Route path="/vm/settings"          element={<VmRoute><VmSettings /></VmRoute>} />
         <Route path="*"                     element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

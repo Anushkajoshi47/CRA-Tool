@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getTickets } from '../api/vmApi';
-import StatusBadge from '../components/StatusBadge';
+import StatusBadge, { ClassificationBadge } from '../components/StatusBadge';
 import { computeDeadlines, timeRemaining } from '../utils/clockCalculations';
 import { exportCsv } from '../../shared/exportCsv';
 
-const CLOSED_STATES = new Set(['closed', 'invalid', 'not_reproducible', 'not_exploitable', 'not_verified']);
 
 export default function TicketQueue() {
   const navigate = useNavigate();
@@ -21,8 +20,8 @@ export default function TicketQueue() {
   }, []);
 
   const visible      = filterStatus ? tickets.filter(t => t.status === filterStatus) : tickets;
-  const openCount    = tickets.filter(t => !CLOSED_STATES.has(t.status)).length;
-  const urgentCount  = tickets.filter(t => t.activelyExploited && !CLOSED_STATES.has(t.status)).length;
+  const openCount    = tickets.filter(t => t.status !== 'closed').length;
+  const urgentCount  = tickets.filter(t => t.classification === 'actively_exploitable' && t.status !== 'closed').length;
 
   return (
     <div style={{ padding: '32px 40px' }}>
@@ -42,13 +41,17 @@ export default function TicketQueue() {
               'Affected Products': (t.affectedProducts || []).map(p => [p.name, p.version].filter(Boolean).join(' ')).join('; '),
               Source: t.sourceChannel,
               'Case Manager': t.caseManager || '',
-              'Actively Exploited': t.activelyExploited ? 'yes' : 'no',
+              Classification: t.classification ? t.classification.replace(/_/g, ' ') : 'unclassified',
+              CVSS: t.cvss?.score != null ? Number(t.cvss.score).toFixed(1) : '',
               'CRA Clock Started': t.clockStartedAt || '',
               Created: t.createdAt,
               Updated: t.updatedAt,
             })))}
           >
-            ⬇ Export CSV
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5, verticalAlign: -1 }}>
+              <path d="M8 2v8m0 0 3-3M8 10 5 7M2.5 13.5h11" />
+            </svg>
+            Export CSV
           </button>
           <Link to="/vm/tickets/new" className="btn btn-primary">+ Log Vulnerability</Link>
         </div>
@@ -69,15 +72,10 @@ export default function TicketQueue() {
           value={filterStatus}
           onChange={e => setFilter(e.target.value)}
         >
-          <option value="">All statuses</option>
+          <option value="">All stages</option>
           {[
-            'received','validating','determining_type',
-            'verifying','assessing_risk','determining_urgency',
-            'urgent_verifying','actively_exploited',
-            'root_cause_analysis','developing_mitigation',
-            'deploying_mitigation','assessing_residual_risk',
-            'documenting_advisory','advisory_published',
-            'closed','invalid','not_reproducible','not_exploitable','not_verified',
+            'receipt','validation','verification','remediation',
+            'advisory','disclosure','reporting','closed',
           ].map(s => (
             <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
           ))}
@@ -123,10 +121,13 @@ export default function TicketQueue() {
                     }
                   </td>
                   <td>
-                    <StatusBadge
-                      status={t.status}
-                      pulse={t.activelyExploited && !CLOSED_STATES.has(t.status)}
-                    />
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <StatusBadge
+                        status={t.status}
+                        pulse={t.classification === 'actively_exploitable' && t.status !== 'closed'}
+                      />
+                      <ClassificationBadge classification={t.classification} />
+                    </div>
                   </td>
                   <td style={{ fontSize: 12, color: 'var(--text-2)', textTransform: 'capitalize' }}>
                     {t.sourceChannel?.replace('_', ' ')}

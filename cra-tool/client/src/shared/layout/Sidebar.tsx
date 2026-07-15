@@ -9,7 +9,7 @@ const VM_NAV = [
   { label: 'Ticket Queue',      path: '/vm/tickets',      Icon: QueueIcon },
   { label: 'Log Vulnerability', path: '/vm/tickets/new',  Icon: PlusIcon  },
   { label: 'Advisories',        path: '/vm/advisories',   Icon: ShieldIcon },
-  { label: 'Settings',          path: '/settings',        Icon: GearIcon },
+  { label: 'Settings',          path: '/vm/settings',     Icon: GearIcon },
 ];
 
 export default function VmSidebar() {

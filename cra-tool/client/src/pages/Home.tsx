@@ -61,7 +61,7 @@ export default function Home() {
   const enforceD  = daysUntil(ENFORCE_DL);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+    <div style={{ minHeight: 'var(--full-h)', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
       {/* Topbar */}
       <header style={{ height: '60px', padding: '0 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', backdropFilter: 'blur(16px)', position: 'sticky', top: 0, zIndex: 50, background: 'var(--panel-bg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

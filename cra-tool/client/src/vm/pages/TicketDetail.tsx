@@ -1,17 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getTicket, getTicketHistory, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport } from '../api/vmApi';
+import { getTicket, getTicketHistory, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport, transitionTicket, deleteTicket } from '../api/vmApi';
+import { stageLabel } from '../utils/lifecycleConfig';
 import ConfirmDialog from '../../shared/ConfirmDialog';
-import StatusBadge from '../components/StatusBadge';
+import StatusBadge, { ClassificationBadge } from '../components/StatusBadge';
 import ClockWidget from '../components/ClockWidget';
-import WorkflowChecklist from '../components/WorkflowChecklist';
+import DecisionCard from '../components/DecisionCard';
 import StatusHistoryLog from '../components/StatusHistoryLog';
 import ReportForm from '../components/ReportForm';
 import FlowStepper from '../components/FlowStepper';
+import { SEVERITY_COLOR } from '../components/CvssCalculator';
 
 const TABS = ['workflow', 'overview', 'history', 'communications', 'reports'];
-
-const TERMINAL_STATES = new Set(['invalid', 'not_reproducible', 'not_exploitable', 'not_verified', 'closed']);
 
 const AUDIENCE_META = {
   finder:    { label: 'Finder',        color: '#60a5fa' },
@@ -32,6 +32,33 @@ export default function TicketDetail() {
   const [showReportForm, setShowReportForm] = useState(false);
   const [editingReport, setEditingReport]   = useState(null);
   const [deletingReport, setDeletingReport] = useState(null);
+  const [moveBackTo, setMoveBackTo]         = useState<string | null>(null);
+  const [confirmDeleteCase, setConfirmDeleteCase] = useState(false);
+  const [actionError, setActionError]       = useState('');
+
+  async function moveBack() {
+    if (!moveBackTo) return;
+    setActionError('');
+    try {
+      await transitionTicket(id!, { toStatus: moveBackTo, note: 'Revising an earlier decision' });
+      setMoveBackTo(null);
+      load();
+    } catch (err: any) {
+      setMoveBackTo(null);
+      setActionError(err.response?.data?.message || 'Could not move the case back');
+    }
+  }
+
+  async function removeCase() {
+    setActionError('');
+    try {
+      await deleteTicket(id!);
+      navigate('/vm/tickets');
+    } catch (err: any) {
+      setConfirmDeleteCase(false);
+      setActionError(err.response?.data?.message || 'Could not delete the case');
+    }
+  }
 
   async function markSubmitted(report) {
     await updateReport(report._id, { submittedAt: new Date().toISOString() });
@@ -86,21 +113,34 @@ export default function TicketDetail() {
           <span style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--accent)', fontWeight: 700 }}>
             {ticket.ticketNumber}
           </span>
-          <StatusBadge
-            status={ticket.status}
-            pulse={ticket.activelyExploited && !TERMINAL_STATES.has(ticket.status)}
+          <StatusBadge status={ticket.status} />
+          <ClassificationBadge
+            classification={ticket.classification}
+            pulse={ticket.classification === 'actively_exploitable' && ticket.status !== 'closed'}
           />
+          {ticket.cvss?.score != null && (
+            <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: SEVERITY_COLOR[ticket.cvss.severity] || 'var(--text-2)' }}>
+              CVSS {Number(ticket.cvss.score).toFixed(1)}
+            </span>
+          )}
           {ticket.isIncident && (
             <span style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Security Incident
             </span>
           )}
-          {ticket.activelyExploited && (
-            <span className="urgent-pulse" style={{ fontSize: 10, fontWeight: 700, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              ⚡ Active Exploit Confirmed
-            </span>
-          )}
+          <button
+            className="btn btn-danger btn-xs"
+            style={{ marginLeft: 'auto' }}
+            onClick={() => setConfirmDeleteCase(true)}
+          >
+            Delete Case
+          </button>
         </div>
+        {ticket.title && (
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 8, lineHeight: 1.35 }}>
+            {ticket.title}
+          </div>
+        )}
         {ticket.affectedProducts?.length > 0 && (
           <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
             {ticket.affectedProducts.map((p, i) => (
@@ -113,8 +153,16 @@ export default function TicketDetail() {
         )}
       </div>
 
-      {/* VDMA process position */}
-      <FlowStepper status={ticket.status} />
+      {/* Lifecycle position — click an earlier stage to move the case back */}
+      <FlowStepper
+        status={ticket.status}
+        closedReason={ticket.closedReason}
+        classification={ticket.classification}
+        onStageClick={key => setMoveBackTo(key)}
+      />
+      {actionError && (
+        <div style={{ color: '#f87171', fontSize: 12, margin: '-12px 0 16px' }}>{actionError}</div>
+      )}
 
       {/* CRA Clock */}
       <ClockWidget
@@ -150,15 +198,28 @@ export default function TicketDetail() {
       {/* Overview */}
       {tab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <Field label="Title" value={ticket.title || '—'} />
           <Field label="Description" value={ticket.description} pre />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-            <Field label="Source Channel"    value={ticket.sourceChannel?.replace(/_/g, ' ')} />
+            <Field label="Reporter"          value={ticket.reporterName || '—'} />
             <Field label="Reporter Contact"  value={ticket.reporterContact || '—'} />
+            <Field label="Source Channel"    value={ticket.sourceChannel?.replace(/_/g, ' ')} />
+            <Field label="Date Reported"     value={new Date(ticket.createdAt).toLocaleDateString()} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 16 }}>
+            <Field label="Deployment Environment" value={ticket.environment || '—'} />
             <Field label="Case Manager (PSSO)" value={ticket.caseManager || 'Unassigned'} />
-            <Field label="Case Type"          value={ticket.isIncident ? 'Security Incident' : 'Vulnerability'} />
+            <Field label="Case Type"           value={ticket.isIncident ? 'Security Incident' : 'Vulnerability'} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-            <Field label="Actively Exploited" value={ticket.activelyExploited ? 'Yes' : 'No'} />
+            <Field label="Classification" value={
+              ticket.classification === 'actively_exploitable' ? 'Actively Exploitable'
+              : ticket.classification === 'exploitable' ? 'Exploitable'
+              : 'Not yet classified'
+            } />
+            <Field label="CVSS" value={ticket.cvss?.score != null ? `${Number(ticket.cvss.score).toFixed(1)} (${ticket.cvss.severity})` : '—'} />
+            <Field label="CERT Notified" value={ticket.certNotifiedAt ? new Date(ticket.certNotifiedAt).toLocaleDateString() : '—'} />
+            <Field label="Outcome" value={ticket.closedReason ? ticket.closedReason.replace(/_/g, ' ') : 'Open'} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <Field label="Created"      value={new Date(ticket.createdAt).toLocaleString()} />
@@ -206,11 +267,10 @@ export default function TicketDetail() {
         )
       )}
 
-      {/* Workflow — guided case tracker */}
+      {/* Workflow — the current decision drives the case */}
       {tab === 'workflow' && (
-        <WorkflowChecklist
+        <DecisionCard
           ticket={ticket}
-          history={history}
           reports={reports}
           advisory={advisory}
           onChanged={load}
@@ -302,6 +362,25 @@ export default function TicketDetail() {
         danger
         onConfirm={removeReport}
         onCancel={() => setDeletingReport(null)}
+      />
+
+      <ConfirmDialog
+        open={!!moveBackTo}
+        title="Move case back?"
+        message={moveBackTo ? `The case will move back to "${stageLabel(moveBackTo)}" so the decision can be revised. Documented data is kept, and the move is recorded in the audit trail.${ticket.status === 'closed' ? ' This reopens the closed case.' : ''}` : ''}
+        confirmLabel={moveBackTo ? `Move to ${stageLabel(moveBackTo)}` : 'Move'}
+        onConfirm={moveBack}
+        onCancel={() => setMoveBackTo(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteCase}
+        title="Delete this case?"
+        message={`${ticket.ticketNumber} and everything attached to it — audit history, notifications, reports, advisories — will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Delete Case"
+        danger
+        onConfirm={removeCase}
+        onCancel={() => setConfirmDeleteCase(false)}
       />
     </div>
   );

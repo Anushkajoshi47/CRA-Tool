@@ -8,9 +8,12 @@ const SOURCE_CHANNELS = ['email', 'phone', 'internal_testing', 'supplier', 'othe
 export default function NewTicketForm() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
+    title:           '',
     sourceChannel:   'email' as SourceChannel,
+    reporterName:    '',
     reporterContact: '',
     caseManager:     '',
+    environment:     '',
     description:     '',
     isIncident:      false,
   });
@@ -55,6 +58,19 @@ export default function NewTicketForm() {
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
+        {/* Vulnerability */}
+        <section>
+          <div className="section-label" style={{ marginBottom: 12 }}>Vulnerability</div>
+          <label className="label">Title *</label>
+          <input
+            className="input"
+            value={form.title}
+            onChange={e => set('title', e.target.value)}
+            required
+            placeholder="Short summary, e.g. RCE in firmware update service"
+          />
+        </section>
+
         {/* Affected Products */}
         <section>
           <div className="section-label" style={{ marginBottom: 12 }}>Affected Products</div>
@@ -93,6 +109,15 @@ export default function NewTicketForm() {
           <button type="button" className="btn btn-ghost btn-sm" onClick={addProduct}>
             + Add Product
           </button>
+          <div style={{ marginTop: 14 }}>
+            <label className="label">Operational / Deployment Environment</label>
+            <input
+              className="input"
+              value={form.environment}
+              onChange={e => set('environment', e.target.value)}
+              placeholder="e.g. medium-voltage drive in industrial plant network, air-gapped"
+            />
+          </div>
         </section>
 
         {/* Source */}
@@ -128,14 +153,23 @@ export default function NewTicketForm() {
               </select>
             </div>
             <div>
-              <label className="label">Reporter Contact</label>
+              <label className="label">Reporter Name</label>
               <input
                 className="input"
-                value={form.reporterContact}
-                onChange={e => set('reporterContact', e.target.value)}
-                placeholder="Name, email, or phone"
+                value={form.reporterName}
+                onChange={e => set('reporterName', e.target.value)}
+                placeholder="Researcher / reporter name"
               />
             </div>
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <label className="label">Reporter Contact</label>
+            <input
+              className="input"
+              value={form.reporterContact}
+              onChange={e => set('reporterContact', e.target.value)}
+              placeholder="Email or phone"
+            />
           </div>
           <div style={{ marginTop: 14 }}>
             <label className="label">Case Manager (PSSO of affected product)</label>

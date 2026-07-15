@@ -2,25 +2,45 @@
 // Mirrors the Mongoose models in cra-tool/server/models.
 
 export type TicketStatus =
-  | 'received'
-  | 'validating'
-  | 'invalid'
-  | 'determining_type'
-  | 'verifying'
-  | 'not_reproducible'
-  | 'assessing_risk'
-  | 'not_exploitable'
-  | 'determining_urgency'
-  | 'urgent_verifying'
-  | 'not_verified'
-  | 'actively_exploited'
-  | 'root_cause_analysis'
-  | 'developing_mitigation'
-  | 'deploying_mitigation'
-  | 'assessing_residual_risk'
-  | 'documenting_advisory'
-  | 'advisory_published'
+  | 'receipt'
+  | 'validation'
+  | 'verification'
+  | 'remediation'
+  | 'advisory'
+  | 'disclosure'
+  | 'reporting'
   | 'closed';
+
+// Independent of workflow status — decided during verification
+export type Classification = 'actively_exploitable' | 'exploitable';
+
+export type ClosedReason = 'invalid' | 'not_exploitable' | 'completed';
+
+export interface Cvss {
+  score: number;
+  severity: string;
+  vector: string;
+}
+
+export interface RemediationDoc {
+  rootCause?: string;
+  method?: string;
+  fixDescription?: string;
+  workaround?: string;
+}
+
+export interface AdvisoryChecks {
+  workMethodDefined?: boolean;
+  patchAvailable?: boolean;
+  productListAvailable?: boolean;
+}
+
+export interface DisclosureData {
+  updateAvailable?: boolean;
+  updateInstructionsAvailable?: boolean;
+  updateUrl?: string;
+  advisoryCompleted?: boolean;
+}
 
 export type SourceChannel = 'email' | 'phone' | 'internal_testing' | 'supplier' | 'other';
 
@@ -33,14 +53,23 @@ export interface AffectedProduct {
 export interface Ticket {
   _id: string;
   ticketNumber: string;
-  affectedProducts: AffectedProduct[];
-  sourceChannel: SourceChannel;
-  reporterContact?: string;
-  caseManager?: string;
+  title?: string;
   description: string;
+  reporterName?: string;
+  reporterContact?: string;
+  affectedProducts: AffectedProduct[];
+  environment?: string;
+  sourceChannel: SourceChannel;
+  caseManager?: string;
   status: TicketStatus;
+  classification?: Classification | null;
+  closedReason?: ClosedReason | null;
+  cvss?: Partial<Cvss> | null;
+  remediation?: RemediationDoc;
+  advisoryChecks?: AdvisoryChecks;
+  certNotifiedAt?: string | null;
+  disclosure?: DisclosureData;
   isIncident: boolean;
-  activelyExploited: boolean;
   clockStartedAt?: string | null;
   mitigationDeployedAt?: string | null;
   createdAt: string;

@@ -6,8 +6,16 @@ export const getTickets       = ()                 => api.get<Ticket[]>('/vm/tic
 export const getTicket        = (id: string)       => api.get<Ticket>(`/vm/tickets/${id}`);
 export const createTicket     = (data: Partial<Ticket>)             => api.post<Ticket>('/vm/tickets', data);
 export const updateTicket     = (id: string, data: Partial<Ticket>) => api.patch<Ticket>(`/vm/tickets/${id}`, data);
-export const transitionTicket = (id: string, data: { toStatus: string; note?: string }) =>
+export const transitionTicket = (id: string, data: { toStatus: string; note?: string; classification?: string; cvss?: any }) =>
   api.post<Ticket>(`/vm/tickets/${id}/transition`, data);
+export const updateStageData = (id: string, data: Pick<Partial<Ticket>, 'remediation' | 'advisoryChecks' | 'disclosure'>) =>
+  api.patch<Ticket>(`/vm/tickets/${id}/stage-data`, data);
+export const notifyCert = (id: string, data: { note?: string } = {}) =>
+  api.post<Ticket>(`/vm/tickets/${id}/notify-cert`, data);
+export const resetCertNotification = (id: string) =>
+  api.delete<Ticket>(`/vm/tickets/${id}/notify-cert`);
+export const deleteTicket = (id: string) =>
+  api.delete(`/vm/tickets/${id}`);
 export const getTicketHistory = (id: string)       => api.get<StatusHistoryEntry[]>(`/vm/tickets/${id}/history`);
 export const getTicketNotifications = (id: string) => api.get<TicketNotification[]>(`/vm/tickets/${id}/notifications`);
 

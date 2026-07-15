@@ -1,59 +1,95 @@
 import mongoose from 'mongoose';
 
-// States follow the VDMA Figure 7 process graph — see services/stateMachine.js
+// Workflow stage — where the case is in the lifecycle (see services/stateMachine.ts)
 const TICKET_STATES = [
-  'received',
-  'validating',
-  'invalid',                  // terminal — rejected at validation, finder notified
-  'determining_type',         // valid report; decide standard vs urgent branch
-  // standard branch
-  'verifying',
-  'not_reproducible',         // terminal — finder notified
-  'assessing_risk',
-  'not_exploitable',          // terminal — not exploitable under practical conditions (VEX)
-  'determining_urgency',      // known exploitable vulnerability
-  // urgent branch (report claims active exploitation)
-  'urgent_verifying',
-  'not_verified',             // terminal — not verifiable / not caused by vuln in our product
-  'actively_exploited',       // CRA Art. 14 reporting obligations start here
-  // remediation loop
-  'root_cause_analysis',
-  'developing_mitigation',
-  'deploying_mitigation',
-  'assessing_residual_risk',
-  // publication
-  'documenting_advisory',
-  'advisory_published',
+  'receipt',
+  'validation',
+  'verification',
+  'remediation',
+  'advisory',
+  'disclosure',
+  'reporting',
   'closed',
 ];
 
+// Classification — independent of stage; decided during verification.
+//   actively_exploitable → highest priority, immediate remediation, reporting required
+//   exploitable          → standard remediation, no reporting
+const CLASSIFICATIONS = ['actively_exploitable', 'exploitable'];
+
+const CLOSED_REASONS = ['invalid', 'not_exploitable', 'completed'];
+
 const ticketSchema = new mongoose.Schema({
   ticketNumber:     { type: String, unique: true },
+
+  // ── Receipt (intake) — visible throughout the lifecycle ──────
+  title:           { type: String, trim: true },
+  description:     { type: String, required: true },
+  reporterName:    { type: String, trim: true },
+  reporterContact: { type: String, trim: true },
   affectedProducts: [{
     name:    { type: String, trim: true },
     version: { type: String, trim: true },
   }],
+  // Operational / deployment environment of the affected product
+  environment:     { type: String, trim: true },
   sourceChannel:   {
     type: String,
     enum: ['email', 'phone', 'internal_testing', 'supplier', 'other'],
     required: true,
   },
-  reporterContact: { type: String, trim: true },
-  // PCERT case manager — preferably the PSSO of the affected product;
-  // navigates the ticket to closure and assigns PSSE for validation.
+
+  // Current owner — navigates the case to closure (preferably the PSSO).
+  // Kept as a single field for now; ownership history / handoffs between
+  // teams can extend this later without a schema redesign (StatusHistory
+  // already records every actor).
   caseManager:     { type: String, trim: true },
-  description:     { type: String, required: true },
-  status:          { type: String, enum: TICKET_STATES, default: 'received' },
-  // Serious security incident (CRA Art. 14 §3) instead of an actively exploited
-  // vulnerability — changes the final-report deadline to 1 month after notification.
+
+  status:           { type: String, enum: TICKET_STATES, default: 'receipt' },
+  classification:   { type: String, enum: [...CLASSIFICATIONS, null], default: null },
+  closedReason:     { type: String, enum: [...CLOSED_REASONS, null], default: null },
+
+  // CVSS 3.1 base score — completed during verification; drives severity/priority
+  cvss: {
+    score:    { type: Number, min: 0, max: 10 },
+    severity: { type: String },
+    vector:   { type: String },
+  },
+
+  // ── Remediation documentation ─────────────────────────────────
+  remediation: {
+    rootCause:      { type: String, trim: true },
+    method:         { type: String, trim: true },
+    fixDescription: { type: String, trim: true },
+    workaround:     { type: String, trim: true },   // optional
+  },
+
+  // ── Advisory stage — pre-disclosure readiness checks ─────────
+  advisoryChecks: {
+    workMethodDefined:    { type: Boolean, default: false },
+    patchAvailable:       { type: Boolean, default: false },
+    productListAvailable: { type: Boolean, default: false },
+  },
+  certNotifiedAt: { type: Date },   // set by the Notify CERT action; gates disclosure
+
+  // ── Disclosure stage ──────────────────────────────────────────
+  disclosure: {
+    updateAvailable:             { type: Boolean, default: false },
+    updateInstructionsAvailable: { type: Boolean, default: false },
+    updateUrl:                   { type: String, trim: true },
+    advisoryCompleted:           { type: Boolean, default: false },
+  },
+
+  // Serious security incident — final report due 1 month after notification
+  // instead of 14 days after mitigation
   isIncident:            { type: Boolean, default: false },
-  activelyExploited:     { type: Boolean, default: false },
-  clockStartedAt:        { type: Date },   // set on → actively_exploited
-  mitigationDeployedAt:  { type: Date },   // set on → assessing_residual_risk; drives 14-day final report
+
+  clockStartedAt:        { type: Date },   // set when classified actively_exploitable
+  mitigationDeployedAt:  { type: Date },   // set when remediation is completed
   createdAt:             { type: Date, default: Date.now },
   updatedAt:             { type: Date, default: Date.now },
 });
 
 const Ticket = mongoose.model('Ticket', ticketSchema);
-export { TICKET_STATES };
+export { TICKET_STATES, CLASSIFICATIONS, CLOSED_REASONS };
 export default Ticket;

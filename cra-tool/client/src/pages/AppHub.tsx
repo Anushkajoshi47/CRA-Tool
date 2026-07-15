@@ -31,7 +31,7 @@ export default function AppHub() {
   const name  = email ? email.split('@')[0] : 'User';
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+    <div style={{ minHeight: 'var(--full-h)', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
       <header style={{ height: '60px', padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
         <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
           CRA Comply <span style={{ color: 'var(--text-3)', fontWeight: 500 }}>/ Platform</span>

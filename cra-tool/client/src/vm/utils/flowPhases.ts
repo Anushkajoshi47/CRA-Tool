@@ -1,27 +1,32 @@
-// Groups the VDMA Figure 7 states into the guideline's high-level phases
-// (Receipt → Verification → ... → Post-release). Shared by the dashboard
-// pipeline and the per-ticket flow stepper.
+// The 8 lifecycle stages of the decision-driven workflow. Shared by the
+// dashboard pipeline and the per-case progress bar. Labels/descriptions
+// come from lifecycleConfig (editable in VM Settings); this file owns
+// ordering and close-reason mapping only.
 export const PHASES = [
-  { key: 'receipt',      label: 'Receipt',        states: ['received'] },
-  { key: 'validation',   label: 'Validation',     states: ['validating', 'determining_type'] },
-  { key: 'verification', label: 'Verification',   states: ['verifying', 'urgent_verifying'] },
-  { key: 'risk',         label: 'Risk Assessment', states: ['assessing_risk', 'determining_urgency', 'actively_exploited'] },
-  { key: 'remediation',  label: 'Remediation',    states: ['root_cause_analysis', 'developing_mitigation', 'deploying_mitigation', 'assessing_residual_risk'] },
-  { key: 'publication',  label: 'Publication',    states: ['documenting_advisory', 'advisory_published'] },
-  { key: 'closed',       label: 'Closed',         states: ['closed'] },
+  { key: 'receipt',      states: ['receipt'] },
+  { key: 'validation',   states: ['validation'] },
+  { key: 'verification', states: ['verification'] },
+  { key: 'remediation',  states: ['remediation'] },
+  { key: 'advisory',     states: ['advisory'] },
+  { key: 'disclosure',   states: ['disclosure'] },
+  { key: 'reporting',    states: ['reporting'] },
+  { key: 'closed',       states: ['closed'] },
 ];
 
-// Terminal early exits, mapped to the phase where they occur
-export const TERMINAL_EXITS = {
-  invalid:          { phase: 'validation',   label: 'Invalid' },
-  not_reproducible: { phase: 'verification', label: 'Not Reproducible' },
-  not_verified:     { phase: 'verification', label: 'Not Verified' },
-  not_exploitable:  { phase: 'risk',         label: 'Not Exploitable (VEX)' },
+// Where an early closure happened, by closedReason
+export const CLOSE_PHASE = {
+  invalid:         'validation',
+  not_exploitable: 'verification',
+  completed:       'closed',
+};
+
+export const CLOSE_LABEL = {
+  invalid:         'Invalid',
+  not_exploitable: 'Not Exploitable (VEX)',
+  completed:       'Completed',
 };
 
 export function phaseOf(status) {
-  const exit = TERMINAL_EXITS[status];
-  if (exit) return exit.phase;
   const phase = PHASES.find(p => p.states.includes(status));
   return phase ? phase.key : 'receipt';
 }

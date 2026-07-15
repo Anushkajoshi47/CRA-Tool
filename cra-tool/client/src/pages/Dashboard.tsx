@@ -288,14 +288,14 @@ function StatCard({ label, value, sub, loading, icon, color = 'var(--accent)' }:
           {icon}
         </div>
         {sub !== undefined && !loading && (
-          <span style={{ fontSize: '10px', color: 'var(--text-2)', fontWeight: 600, fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.04)', padding: '2px 7px', borderRadius: '4px', border: '1px solid var(--border)' }}>{sub}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 600, fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.04)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}>{sub}</span>
         )}
       </div>
       {loading
-        ? <div className="skeleton" style={{ height: '36px', width: '55%', borderRadius: '6px' }} />
-        : <div className="mono" style={{ fontSize: '32px', fontWeight: 700, color, lineHeight: 1, letterSpacing: '-1.5px' }}>{value}</div>
+        ? <div className="skeleton" style={{ height: '42px', width: '55%', borderRadius: '6px' }} />
+        : <div className="mono" style={{ fontSize: '40px', fontWeight: 700, color, lineHeight: 1, letterSpacing: '-1.5px' }}>{value}</div>
       }
-      <div style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '6px', fontWeight: 500 }}>{label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '8px', fontWeight: 600 }}>{label}</div>
     </div>
   );
 }
@@ -463,29 +463,29 @@ export default function Dashboard() {
                   return (
                     <tr key={p._id}>
                       <td>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{p.name}</div>
-                        <div className="mono" style={{ fontSize: '10px', color: 'var(--text-2)', marginTop: '2px' }}>{p.firmwareVersion || '—'}</div>
+                        <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text)' }}>{p.name}</div>
+                        <div className="mono" style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-2)', marginTop: '2px' }}>{p.firmwareVersion || '—'}</div>
                       </td>
-                      <td className="mono" style={{ fontSize: '11px', color: 'var(--text-2)' }}>{p.modelNumber || '—'}</td>
+                      <td className="mono" style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text)' }}>{p.modelNumber || '—'}</td>
                       <td>
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: '9.5px', fontWeight: 700, color: p.craClass === 'Important' ? 'var(--amber)' : p.craClass === 'Critical' ? 'var(--red)' : 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: '10.5px', fontWeight: 800, color: p.craClass === 'Important' ? 'var(--amber)' : p.craClass === 'Critical' ? 'var(--red)' : 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           {p.craClass || 'Default'}
                         </span>
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <MiniRing score={score} hex={hex} />
-                          <span className="mono" style={{ fontSize: '15px', fontWeight: 700, color: hex, lineHeight: 1 }}>{score}%</span>
+                          <span className="mono" style={{ fontSize: '16px', fontWeight: 800, color: hex, lineHeight: 1 }}>{score}%</span>
                         </div>
                       </td>
                       <td style={{ width: '120px', paddingRight: '16px' }}>
-                        <div className="pbar-track" style={{ height: '4px' }}>
+                        <div className="pbar-track" style={{ height: '6px' }}>
                           <div className="pbar-fill" style={{ width: `${score}%`, background: hex, boxShadow: `0 0 6px ${hex}55` }} />
                         </div>
                       </td>
                       <td>
                         <span className={`pill pill-${status === 'not_started' ? 'pending' : status === 'done' ? 'completed' : 'in-progress'}`}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
                           <scfg.Icon size={9} />
                           {scfg.label}
                         </span>

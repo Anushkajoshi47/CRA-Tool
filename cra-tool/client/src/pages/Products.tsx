@@ -97,7 +97,7 @@ export default function Products() {
           <button className="btn btn-primary btn-sm" onClick={() => navigate('/product/new')}>Add First Product</button>
         </div>
       ) : (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
           <table className="data-table">
             <thead>
               <tr>
@@ -136,7 +136,7 @@ export default function Products() {
                         <span className="mono" style={{ fontSize: '15px', fontWeight: 700, color: hex }}>{score}%</span>
                       </div>
                     </td>
-                    <td style={{ width: '130px' }}>
+                    <td style={{ width: '110px' }}>
                       <div className="pbar-track" style={{ height: '4px' }}>
                         <div className="pbar-fill" style={{ width: `${score}%`, background: hex, boxShadow: `0 0 6px ${hex}55` }} />
                       </div>
@@ -154,7 +154,7 @@ export default function Products() {
                     <td className="mono" style={{ fontSize: '11px', color: 'var(--text-2)' }}>
                       {p.supportPeriodYears ? `${p.supportPeriodYears} yr` : '—'}
                     </td>
-                    <td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/compliance/${p._id}`)}>Open</button>
                         <button className="btn btn-danger btn-sm" disabled={deleting === p._id}

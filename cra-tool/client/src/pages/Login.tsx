@@ -24,7 +24,7 @@ export default function Login() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative' }}>
+    <div style={{ minHeight: 'var(--full-h)', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative' }}>
       {/* Ambient glow handled by body::before */}
 
       <div className="fade-up" style={{ width: '100%', maxWidth: '400px' }}>

@@ -21,7 +21,10 @@ export default function AdvisoryList() {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Security Advisories</h1>
         </div>
         <button className="btn btn-ghost btn-sm no-print" disabled={advisories.length === 0} onClick={() => window.print()}>
-          🖨 Print / Save as PDF
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5, verticalAlign: -1 }}>
+            <path d="M4.5 6V2.5h7V6M4.5 11.5h-2v-5.5h11v5.5h-2M4.5 9.5h7v4h-7z" />
+          </svg>
+          Print / Save as PDF
         </button>
       </div>
 
