@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, name, orgName } = req.body;
     if (!email || !password)
       return res.status(400).json({ message: 'Email and password are required' });
 
@@ -16,7 +16,7 @@ router.post('/register', async (req, res) => {
     if (existing) return res.status(409).json({ message: 'Email already registered' });
 
     const hashed = await bcrypt.hash(password, 12);
-    const user = await User.create({ email, password: hashed });
+    const user = await User.create({ email, password: hashed, name: name || '', orgName: orgName || '' });
 
     const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, {
       expiresIn: '7d',

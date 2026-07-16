@@ -1,5 +1,5 @@
 import api from '../../api';
-import type { Ticket, Report, Advisory, StatusHistoryEntry, TicketNotification } from '../../types';
+import type { Ticket, Report, Advisory, TicketNotification } from '../../types';
 
 // Tickets
 export const getTickets       = ()                 => api.get<Ticket[]>('/vm/tickets');
@@ -16,7 +16,10 @@ export const resetCertNotification = (id: string) =>
   api.delete<Ticket>(`/vm/tickets/${id}/notify-cert`);
 export const deleteTicket = (id: string) =>
   api.delete(`/vm/tickets/${id}`);
-export const getTicketHistory = (id: string)       => api.get<StatusHistoryEntry[]>(`/vm/tickets/${id}/history`);
+export const getTicketActivity = (id: string)      => api.get<any[]>(`/vm/tickets/${id}/activity`);
+export const getRecentActivity = (limit = 10)       => api.get<any[]>(`/vm/tickets/feed/activity?limit=${limit}`);
+export const addComment = (id: string, content: string) =>
+  api.post<any[]>(`/vm/tickets/${id}/comments`, { content });
 export const getTicketNotifications = (id: string) => api.get<TicketNotification[]>(`/vm/tickets/${id}/notifications`);
 
 // Reports

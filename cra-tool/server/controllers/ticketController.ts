@@ -3,7 +3,23 @@ import StatusHistory from '../models/StatusHistory';
 import Notification from '../models/Notification';
 import Advisory from '../models/Advisory';
 import Report from '../models/Report';
+import Activity from '../models/Activity';
+import { logActivity } from '../services/activityLog';
 import { canTransition, isBackward, CLOSE_REASON_BY_STAGE, guardTransition } from '../services/stateMachine';
+
+// Human-readable decision label for each forward transition — recorded in
+// the Activity Timeline so any engineer can read the case history at a glance.
+const DECISION_LABELS = {
+  'receipt>validation':       { action: 'Started validation' },
+  'validation>verification':  { action: 'Validated the report against the CVD policy', decision: 'Valid' },
+  'validation>closed':        { action: 'Validated the report against the CVD policy', decision: 'Invalid — case closed' },
+  'verification>closed':      { action: 'Completed verification', decision: 'Not exploitable — closed as VEX' },
+  'remediation>advisory':     { action: 'Completed remediation documentation' },
+  'advisory>disclosure':      { action: 'Confirmed advisory readiness — disclosure started' },
+  'disclosure>reporting':     { action: 'Published the advisory and update', decision: 'Disclosure complete — reporting required' },
+  'disclosure>closed':        { action: 'Published the advisory and update', decision: 'Disclosure complete — no reporting required, case closed' },
+  'reporting>closed':         { action: 'Submitted all required reports', decision: 'Case closed — lifecycle completed' },
+};
 
 // PCERT standard responses to the researcher (and users/authority), logged as
 // the case moves through decisions. Closure responses carry the case manager's
@@ -56,13 +72,20 @@ export const create = async (req, res) => {
     const ticket = new Ticket({ ...body, ticketNumber, status: 'receipt' });
     await ticket.save();
 
-    await StatusHistory.create({
-      ticketId:   ticket._id,
-      fromStatus: null,
-      toStatus:   'receipt',
-      actor:      req.user.userId,
-      note:       'Case created via intake',
+    await logActivity(ticket._id, req.user.userId, {
+      type: 'created',
+      action: `Registered case ${ticketNumber} via intake`,
+      note: ticket.title || undefined,
+      stageAfter: 'receipt',
     });
+    if (ticket.caseManager) {
+      await logActivity(ticket._id, req.user.userId, {
+        type: 'ownership',
+        action: 'Assigned case ownership',
+        decision: `Owner: ${ticket.caseManager}`,
+        stageAfter: 'receipt',
+      });
+    }
 
     await Notification.create({
       ticketId: ticket._id,
@@ -86,12 +109,25 @@ export const update = async (req, res) => {
     } = req.body;
     allowed.updatedAt = new Date();
 
+    const before = await Ticket.findById(req.params.id).select('caseManager status').lean() as any;
+    if (!before) return res.status(404).json({ message: 'Ticket not found' });
+
     const ticket = await Ticket.findByIdAndUpdate(
       req.params.id,
       allowed,
       { new: true, runValidators: true }
     );
     if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+    // Ownership changes are first-class timeline events for distributed teams
+    if (allowed.caseManager !== undefined && allowed.caseManager !== before.caseManager) {
+      await logActivity(ticket._id, req.user.userId, {
+        type: 'ownership',
+        action: 'Changed case ownership',
+        decision: `Owner: ${before.caseManager || 'Unassigned'} → ${allowed.caseManager || 'Unassigned'}`,
+        stageAfter: ticket.status,
+      });
+    }
     res.json(ticket);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -119,6 +155,17 @@ export const updateStageData = async (req, res) => {
     if (disclosure)     ticket.set('disclosure',     merge(ticket.disclosure, disclosure));
     ticket.updatedAt = new Date();
     await ticket.save();
+
+    const sections = [
+      remediation    && 'remediation documentation',
+      advisoryChecks && 'advisory readiness checks',
+      disclosure     && 'disclosure details',
+    ].filter(Boolean).join(', ');
+    await logActivity(ticket._id, req.user.userId, {
+      type: 'stage_data',
+      action: `Updated ${sections}`,
+      stageAfter: ticket.status,
+    });
     res.json(ticket);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -146,12 +193,11 @@ export const notifyCert = async (req, res) => {
     ticket.updatedAt = new Date();
     await ticket.save();
 
-    await StatusHistory.create({
-      ticketId:   ticket._id,
-      fromStatus: 'advisory',
-      toStatus:   'advisory',
-      actor:      req.user.userId,
-      note:       `CERT notified${req.body.note ? ` — ${req.body.note}` : ''}`,
+    await logActivity(ticket._id, req.user.userId, {
+      type: 'cert',
+      action: 'Notified CERT — advisory readiness confirmed',
+      note: req.body.note,
+      stageAfter: 'advisory',
     });
     await Notification.create({
       ticketId: ticket._id,
@@ -186,16 +232,18 @@ export const transition = async (req, res) => {
     // ── Backward move / reopen: revising an earlier decision ───
     // Documented data is preserved; only the closure marker is cleared.
     if (backward) {
-      if (fromStatus === 'closed') ticket.closedReason = null;
+      const wasClosed = fromStatus === 'closed';
+      if (wasClosed) ticket.closedReason = null;
       ticket.status    = toStatus;
       ticket.updatedAt = new Date();
       await ticket.save();
-      await StatusHistory.create({
-        ticketId:   ticket._id,
-        fromStatus,
-        toStatus,
-        actor:      req.user.userId,
-        note:       note ? `Moved back — ${note}` : `Moved back to ${toStatus.replace(/_/g, ' ')} to revise the decision`,
+      await logActivity(ticket._id, req.user.userId, {
+        type: 'moved_back',
+        action: wasClosed
+          ? `Reopened the case — returned to ${toStatus.replace(/_/g, ' ')}`
+          : `Moved the case back to ${toStatus.replace(/_/g, ' ')} to revise a decision`,
+        note,
+        stageAfter: toStatus,
       });
       return res.json(ticket);
     }
@@ -266,12 +314,26 @@ export const transition = async (req, res) => {
     ticket.updatedAt = new Date();
     await ticket.save();
 
-    await StatusHistory.create({
-      ticketId:   ticket._id,
-      fromStatus,
-      toStatus,
-      actor:      req.user.userId,
-      note:       note || '',
+    // ── Timeline entry with the decision spelled out ────────────
+    const label: any = DECISION_LABELS[`${fromStatus}>${toStatus}`] || {
+      action: `Moved the case from ${fromStatus.replace(/_/g, ' ')} to ${toStatus.replace(/_/g, ' ')}`,
+    };
+    let decisionText = label.decision;
+    if (fromStatus === 'verification' && toStatus === 'remediation') {
+      decisionText = classification === 'actively_exploitable'
+        ? 'Exploitable — classified ACTIVELY EXPLOITABLE (highest priority, reporting required)'
+        : 'Exploitable — classified EXPLOITABLE (standard remediation, no reporting)';
+      label.action = 'Completed verification and classified the vulnerability';
+    }
+    await logActivity(ticket._id, req.user.userId, {
+      type: toStatus === 'closed' ? 'closure' : 'transition',
+      action: label.action,
+      decision: decisionText,
+      note,
+      stageAfter: toStatus,
+      meta: fromStatus === 'verification' && ticket.cvss?.score != null
+        ? { cvss: ticket.cvss.score, severity: ticket.cvss.severity }
+        : undefined,
     });
 
     if (notifs.length) {
@@ -299,12 +361,11 @@ export const resetCertNotification = async (req, res) => {
     ticket.certNotifiedAt = null;
     ticket.updatedAt = new Date();
     await ticket.save();
-    await StatusHistory.create({
-      ticketId:   ticket._id,
-      fromStatus: 'advisory',
-      toStatus:   'advisory',
-      actor:      req.user.userId,
-      note:       `CERT notification reset${req.body.note ? ` — ${req.body.note}` : ''}`,
+    await logActivity(ticket._id, req.user.userId, {
+      type: 'cert',
+      action: 'Reset the CERT notification — advisory checks reopened',
+      note: req.body.note,
+      stageAfter: 'advisory',
     });
     res.json(ticket);
   } catch (err) {
@@ -321,6 +382,7 @@ export const remove = async (req, res) => {
 
     await Promise.all([
       StatusHistory.deleteMany({ ticketId: ticket._id }),
+      Activity.deleteMany({ ticketId: ticket._id }),
       Notification.deleteMany({ ticketId: ticket._id }),
       Report.deleteMany({ ticketId: ticket._id }),
       Advisory.deleteMany({ ticketId: ticket._id }),
@@ -333,10 +395,53 @@ export const remove = async (req, res) => {
   }
 };
 
-export const getHistory = async (req, res) => {
+// Recent activity across ALL cases — feeds the dashboard so the team sees
+// what happened last anywhere in the workspace.
+export const getRecentActivity = async (req, res) => {
   try {
-    const history = await StatusHistory.find({ ticketId: req.params.id }).sort({ timestamp: 1 });
-    res.json(history);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
+    const activity = await Activity.find().sort({ createdAt: -1 }).limit(limit).lean();
+
+    // Attach ticket number + title for linking
+    const ids = [...new Set(activity.map(a => String(a.ticketId)))];
+    const tickets = await Ticket.find({ _id: { $in: ids } }).select('ticketNumber title').lean();
+    const byId = Object.fromEntries(tickets.map((t: any) => [String(t._id), t]));
+    res.json(activity.map(a => ({
+      ...a,
+      ticketNumber: byId[String(a.ticketId)]?.ticketNumber,
+      ticketTitle:  byId[String(a.ticketId)]?.title,
+    })));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// The Activity Timeline: chronological, system-generated audit trail.
+export const getActivity = async (req, res) => {
+  try {
+    const activity = await Activity.find({ ticketId: req.params.id }).sort({ createdAt: 1 });
+    res.json(activity);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// POST a comment — the only user-authored timeline entry type.
+export const addComment = async (req, res) => {
+  try {
+    const content = (req.body.content || '').trim();
+    if (!content) return res.status(400).json({ message: 'Comment text is required' });
+    const ticket = await Ticket.findById(req.params.id);
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+    await logActivity(ticket._id, req.user.userId, {
+      type: 'comment',
+      action: 'Commented',
+      note: content,
+      stageAfter: ticket.status,
+    });
+    const activity = await Activity.find({ ticketId: ticket._id }).sort({ createdAt: 1 });
+    res.status(201).json(activity);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

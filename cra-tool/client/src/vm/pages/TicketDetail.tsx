@@ -1,17 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getTicket, getTicketHistory, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport, transitionTicket, deleteTicket } from '../api/vmApi';
+import { getTicket, getTicketActivity, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport, transitionTicket, deleteTicket } from '../api/vmApi';
 import { stageLabel } from '../utils/lifecycleConfig';
 import ConfirmDialog from '../../shared/ConfirmDialog';
 import StatusBadge, { ClassificationBadge } from '../components/StatusBadge';
 import ClockWidget from '../components/ClockWidget';
 import DecisionCard from '../components/DecisionCard';
-import StatusHistoryLog from '../components/StatusHistoryLog';
+import Timeline from '../components/Timeline';
 import ReportForm from '../components/ReportForm';
 import FlowStepper from '../components/FlowStepper';
 import { SEVERITY_COLOR } from '../components/CvssCalculator';
 
-const TABS = ['workflow', 'overview', 'history', 'communications', 'reports'];
+const TABS = ['workflow', 'overview', 'timeline', 'communications', 'reports'];
 
 const AUDIENCE_META = {
   finder:    { label: 'Finder',        color: '#60a5fa' },
@@ -23,7 +23,7 @@ export default function TicketDetail() {
   const { id }   = useParams();
   const navigate = useNavigate();
   const [ticket,  setTicket]        = useState(null);
-  const [history, setHistory]       = useState([]);
+  const [activity, setActivity]     = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [reports, setReports]       = useState([]);
   const [advisory, setAdvisory]     = useState(null);
@@ -76,13 +76,13 @@ export default function TicketDetail() {
     try {
       const [t, h, n, r, a] = await Promise.all([
         getTicket(id),
-        getTicketHistory(id),
+        getTicketActivity(id),
         getTicketNotifications(id),
         getReports(id),
         getAdvisories(id),
       ]);
       setTicket(t.data);
-      setHistory(h.data);
+      setActivity(h.data);
       setNotifications(n.data);
       setReports(r.data);
       setAdvisory(a.data[0] || null);
@@ -234,8 +234,8 @@ export default function TicketDetail() {
         </div>
       )}
 
-      {/* History */}
-      {tab === 'history' && <StatusHistoryLog history={history} />}
+      {/* Activity Timeline — the case's audit trail */}
+      {tab === 'timeline' && <Timeline ticketId={id!} activity={activity} onChanged={load} />}
 
       {/* Communications — message flows from the VDMA process graph */}
       {tab === 'communications' && (

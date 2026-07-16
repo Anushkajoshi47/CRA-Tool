@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getTickets, getAdvisories } from '../api/vmApi';
+import { getTickets, getAdvisories, getRecentActivity } from '../api/vmApi';
 import StatusBadge, { ClassDot } from '../components/StatusBadge';
 import { SEVERITY_COLOR } from '../components/CvssCalculator';
 import { computeDeadlines, timeRemaining } from '../utils/clockCalculations';
@@ -11,11 +11,12 @@ import LifecycleJourney from '../components/LifecycleJourney';
 export default function VmDashboard() {
   const [tickets, setTickets]       = useState<any[]>([]);
   const [advisories, setAdvisories] = useState<any[]>([]);
+  const [feed, setFeed]             = useState<any[]>([]);
   const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
-    Promise.all([getTickets(), getAdvisories()])
-      .then(([t, a]) => { setTickets(t.data); setAdvisories(a.data); })
+    Promise.all([getTickets(), getAdvisories(), getRecentActivity(12)])
+      .then(([t, a, f]) => { setTickets(t.data); setAdvisories(a.data); setFeed(f.data); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -113,32 +114,76 @@ export default function VmDashboard() {
         )}
       </div>
 
-      {/* Recent */}
-      <div className="section-label" style={{ marginBottom: 12 }}>Recent Cases</div>
-      {recent.length === 0 ? (
-        <p style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-          No cases yet. <Link to="/vm/tickets/new">Log the first one →</Link>
-        </p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {recent.map(t => (
-            <Link key={t._id} to={`/vm/tickets/${t._id}`} className="card card-click" style={{ padding: '12px 16px', display: 'block' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{t.ticketNumber}</span>
-                <StatusBadge status={t.status} />
-                <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--text-3)' }}>
-                  {new Date(t.updatedAt || t.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {t.description}
-              </div>
-            </Link>
-          ))}
+      {/* Recent activity + recent cases, side by side */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'start' }}>
+        <div>
+          <div className="section-label" style={{ marginBottom: 12 }}>Recent Activity</div>
+          <div className="card card-flat" style={{ padding: '6px 16px' }}>
+            {feed.length === 0 ? (
+              <p style={{ fontSize: 12, color: 'var(--text-3)', padding: '10px 0' }}>No activity yet.</p>
+            ) : feed.map((a, i) => (
+              <Link key={a._id || i} to={`/vm/tickets/${a.ticketId}`}
+                style={{ display: 'block', padding: '9px 0', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: FEED_COLOR[a.type] || 'var(--text-3)', flexShrink: 0, alignSelf: 'center' }} />
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)', fontWeight: 700 }}>{a.ticketNumber || '—'}</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text)' }}>{a.actorName}</span>
+                  <span className="mono" style={{ fontSize: 9.5, color: 'var(--text-3)', marginLeft: 'auto', whiteSpace: 'nowrap' }} title={new Date(a.createdAt).toLocaleString()}>
+                    {timeAgo(a.createdAt)}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--text-2)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {a.action}{a.decision ? ` — ${a.decision}` : ''}
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-      )}
+
+        <div>
+          <div className="section-label" style={{ marginBottom: 12 }}>Recent Cases</div>
+          {recent.length === 0 ? (
+            <p style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+              No cases yet. <Link to="/vm/tickets/new">Log the first one →</Link>
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {recent.map(t => (
+                <Link key={t._id} to={`/vm/tickets/${t._id}`} className="card card-click" style={{ padding: '12px 16px', display: 'block' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{t.ticketNumber}</span>
+                    <StatusBadge status={t.status} />
+                    <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--text-3)' }}>
+                      {new Date(t.updatedAt || t.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {t.title || t.description}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
+}
+
+/* ── Recent-activity helpers ─────────────────────────────────── */
+const FEED_COLOR: Record<string, string> = {
+  created: '#60a5fa', transition: '#00c8c8', closure: '#00e676', moved_back: '#f59e0b',
+  ownership: '#a78bfa', stage_data: '#a8a8c8', cert: '#f87171', report: '#f97316',
+  advisory: '#00c8c8', comment: '#818cf8',
+};
+
+function timeAgo(iso: string) {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60)     return 'just now';
+  if (s < 3600)   return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400)  return `${Math.floor(s / 3600)}h ago`;
+  if (s < 604800) return `${Math.floor(s / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString();
 }
 
 /* ── Priority queue card ─────────────────────────────────────── */
