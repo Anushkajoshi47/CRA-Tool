@@ -3,6 +3,7 @@ import auth from '../middleware/auth';
 import Requirement from '../models/Requirement';
 import ComplianceItem from '../models/ComplianceItem';
 import Product from '../models/Product';
+import { logComplianceActivity } from '../services/activityLog';
 
 const router = express.Router();
 
@@ -15,12 +16,12 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// One-call dashboard summary: every product of the user with its compliance
-// items (light fields only — no legal text). Replaces the N-per-product
-// fetch pattern that made the dashboard slow on remote backends.
+// One-call dashboard summary: every team product with its compliance items
+// (light fields only — no legal text). Replaces the N-per-product fetch
+// pattern that made the dashboard slow on remote backends.
 router.get('/summary/all', auth, async (req, res) => {
   try {
-    const products = await Product.find({ userId: req.user.userId }).sort({ createdAt: -1 }).lean();
+    const products = await Product.find({}).sort({ createdAt: -1 }).lean();
     const pids = products.map(p => p._id);
 
     const [reqs, items] = await Promise.all([
@@ -59,7 +60,7 @@ router.get('/summary/all', auth, async (req, res) => {
 
 router.get('/:productId', auth, async (req, res) => {
   try {
-    const product = await Product.findOne({ _id: req.params.productId, userId: req.user.userId });
+    const product = await Product.findById(req.params.productId);
     if (!product) return res.status(404).json({ message: 'Product not found' });
 
     const allReqs = await Requirement.find({}).sort({ sortOrder: 1 }).lean();
@@ -110,18 +111,32 @@ router.patch('/item/:itemId', auth, async (req, res) => {
   try {
     const { status, notes, evidenceDescription } = req.body;
 
-    const item = await ComplianceItem.findById(req.params.itemId).populate('productId');
+    // Compliance data is team-shared — any officer may update any item.
+    const item = await ComplianceItem.findById(req.params.itemId);
     if (!item) return res.status(404).json({ message: 'Item not found' });
 
-    if ((item.productId as any).userId.toString() !== req.user.userId)
-      return res.status(403).json({ message: 'Forbidden' });
-
+    const statusChanged = status !== undefined && status !== item.status;
     if (status !== undefined) item.status = status;
     if (notes !== undefined) item.notes = notes;
     if (evidenceDescription !== undefined) item.evidenceDescription = evidenceDescription;
     item.updatedAt = new Date();
 
     await item.save();
+
+    // Log status changes (the meaningful compliance decisions) with who made them
+    if (statusChanged) {
+      const [product, requirement] = await Promise.all([
+        Product.findById(item.productId).select('name').lean() as any,
+        Requirement.findById(item.requirementId).select('title articleRef').lean() as any,
+      ]);
+      const STATUS_LABEL = { not_started: 'Pending', in_progress: 'In Progress', done: 'Completed', needs_review: 'Needs Review' };
+      const reqLabel = requirement ? `${requirement.articleRef ? requirement.articleRef + ' · ' : ''}${requirement.title}` : 'requirement';
+      await logComplianceActivity(req.user.userId, {
+        productId: item.productId, productName: product?.name,
+        action: 'Updated compliance status',
+        detail: `${reqLabel} → ${STATUS_LABEL[status] || status}`,
+      });
+    }
     res.json(item);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

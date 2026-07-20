@@ -6,6 +6,12 @@ import Report from '../models/Report';
 import Activity from '../models/Activity';
 import { logActivity } from '../services/activityLog';
 import { canTransition, isBackward, CLOSE_REASON_BY_STAGE, guardTransition } from '../services/stateMachine';
+import { isStaleWrite, STALE_WRITE_MESSAGE } from '../services/concurrency';
+
+// 409 when the client's view of the case is stale (another officer wrote first)
+function staleResponse(res, ticket) {
+  return res.status(409).json({ message: STALE_WRITE_MESSAGE, currentUpdatedAt: ticket.updatedAt });
+}
 
 // Human-readable decision label for each forward transition — recorded in
 // the Activity Timeline so any engineer can read the case history at a glance.
@@ -105,12 +111,13 @@ export const update = async (req, res) => {
     const {
       status, classification, closedReason, cvss, remediation, advisoryChecks,
       certNotifiedAt, disclosure, clockStartedAt, mitigationDeployedAt, ticketNumber,
-      ...allowed
+      expectedUpdatedAt, ...allowed
     } = req.body;
     allowed.updatedAt = new Date();
 
-    const before = await Ticket.findById(req.params.id).select('caseManager status').lean() as any;
+    const before = await Ticket.findById(req.params.id).select('caseManager status updatedAt').lean() as any;
     if (!before) return res.status(404).json({ message: 'Ticket not found' });
+    if (isStaleWrite(before.updatedAt, expectedUpdatedAt)) return staleResponse(res, before);
 
     const ticket = await Ticket.findByIdAndUpdate(
       req.params.id,
@@ -144,6 +151,7 @@ export const updateStageData = async (req, res) => {
     if (ticket.status === 'closed') {
       return res.status(400).json({ message: 'Case is closed — stage data is read-only' });
     }
+    if (isStaleWrite(ticket.updatedAt, req.body.expectedUpdatedAt)) return staleResponse(res, ticket);
 
     const { remediation, advisoryChecks, disclosure } = req.body;
     const merge = (current: any, patch: any) => ({
@@ -215,9 +223,11 @@ export const notifyCert = async (req, res) => {
 // Body: { toStatus, note?, classification?, cvss? }
 export const transition = async (req, res) => {
   try {
-    const { toStatus, note, classification, cvss } = req.body;
+    const { toStatus, note, classification, cvss, expectedUpdatedAt } = req.body;
     const ticket = await Ticket.findById(req.params.id);
     if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+    if (isStaleWrite(ticket.updatedAt, expectedUpdatedAt)) return staleResponse(res, ticket);
 
     if (!canTransition(ticket.status, toStatus)) {
       return res.status(400).json({

@@ -78,23 +78,26 @@ export default function DecisionCard({ ticket, reports, advisory, onChanged, got
       onChanged();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Action failed');
+      // 409 = another officer changed this case first; reload to the latest
+      if (err.response?.status === 409) onChanged();
     } finally {
       setLoading(false);
     }
   }
 
   const decide = (toStatus: string, extra: any = {}) =>
-    run(() => transitionTicket(ticket._id, { toStatus, note, ...extra }));
+    run(() => transitionTicket(ticket._id, { toStatus, note, expectedUpdatedAt: ticket.updatedAt, ...extra }));
 
   async function saveStage(data: any, label: string) {
     setError('');
     setSaved('');
     try {
-      await updateStageData(ticket._id, data);
+      await updateStageData(ticket._id, { ...data, expectedUpdatedAt: ticket.updatedAt });
       setSaved(label);
       onChanged();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Save failed');
+      if (err.response?.status === 409) onChanged();
     }
   }
 
@@ -458,7 +461,7 @@ export default function DecisionCard({ ticket, reports, advisory, onChanged, got
             disabled={loading || !remediationComplete}
             title={!remediationComplete ? 'Root cause, method, and fix description are required' : undefined}
             onClick={() => run(async () => {
-              await updateStageData(ticket._id, { remediation: rem });
+              await updateStageData(ticket._id, { remediation: rem, expectedUpdatedAt: ticket.updatedAt });
               await transitionTicket(ticket._id, { toStatus: 'advisory', note });
             })}
           >
@@ -483,7 +486,7 @@ export default function DecisionCard({ ticket, reports, advisory, onChanged, got
             disabled={loading || !disclosureComplete}
             title={!disclosureComplete ? 'Update, instructions, URL, and advisory must all be complete' : undefined}
             onClick={() => run(async () => {
-              await updateStageData(ticket._id, { disclosure: disc });
+              await updateStageData(ticket._id, { disclosure: disc, expectedUpdatedAt: ticket.updatedAt });
               await transitionTicket(ticket._id, { toStatus: isActive ? 'reporting' : 'closed', note });
             })}
           >

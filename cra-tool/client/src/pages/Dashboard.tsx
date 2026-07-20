@@ -181,63 +181,71 @@ function ComplianceJourney({ products, items }) {
 }
 
 /* ── Recent activity timeline ───────────────────────────────── */
-function RecentActivity({ products, items }) {
-  const allWithProduct = Object.entries(items).flatMap(([pid, its]: any) => {
-    const prod = products.find(p => p._id === pid);
-    return its.map(item => ({ item, product: prod }));
-  });
+const ACTIVITY_COLOR = {
+  'Registered product':        '#60a5fa',
+  'Edited product details':    '#a78bfa',
+  'Deleted product':           '#f87171',
+  'Updated compliance status': '#00e676',
+};
 
-  const recent = allWithProduct
-    .filter(({ item }) => item.status !== 'not_started' || item.notes?.trim())
-    .sort((a, b) => new Date(b.item.updatedAt).getTime() - new Date(a.item.updatedAt).getTime())
-    .slice(0, 6);
+function activityTimeAgo(date) {
+  const s = Math.max(0, (Date.now() - new Date(date).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 604800) return `${Math.floor(s / 86400)}d ago`;
+  return new Date(date).toLocaleDateString();
+}
 
-  function timeAgo(date) {
-    const diff = Date.now() - new Date(date).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  }
+// Team-wide audit feed: shows WHO changed what across the shared product
+// registry. Timestamps render in each viewer's local timezone.
+function RecentActivity() {
+  const [feed, setFeed] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    api.get('/products/activity/feed?limit=8')
+      .then(res => setFeed(res.data))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, []);
 
   return (
     <div className="card card-flat" style={{ padding: '24px' }}>
       <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>Recent Activity</div>
-      <div style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: '20px' }}>Latest compliance updates</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: '20px' }}>Who changed what across the team</div>
 
-      {recent.length === 0 ? (
+      {loaded && feed.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-3)', fontSize: '12px' }}>
-          No activity yet. Start by updating requirement statuses.
+          No activity yet. Register a product or update requirement statuses.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-          {recent.map(({ item, product }, idx) => {
-            const cfg = STATUS_CFG[item.status] || STATUS_CFG.not_started;
+          {feed.map((a, idx) => {
+            const color = ACTIVITY_COLOR[a.action] || '#6e6e8a';
             return (
-              <div key={item._id || item.itemId} style={{ display: 'flex', gap: '12px', paddingTop: idx === 0 ? '0' : '14px', paddingBottom: '14px', borderBottom: idx < recent.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                {/* Timeline dot */}
+              <div key={a._id || idx} style={{ display: 'flex', gap: '12px', paddingTop: idx === 0 ? '0' : '14px', paddingBottom: '14px', borderBottom: idx < feed.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, paddingTop: '2px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: cfg.color, boxShadow: `0 0 6px ${cfg.color}66`, flexShrink: 0 }} />
-                  {idx < recent.length - 1 && <div style={{ width: '1px', flex: 1, background: 'var(--border)', marginTop: '6px', minHeight: '24px' }} />}
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}66`, flexShrink: 0 }} />
+                  {idx < feed.length - 1 && <div style={{ width: '1px', flex: 1, background: 'var(--border)', marginTop: '6px', minHeight: '24px' }} />}
                 </div>
-                {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
-                      {item.title || item.requirementId?.title || 'Requirement'}
-                    </span>
-                    <span className={`pill pill-${item.status === 'not_started' ? 'pending' : item.status === 'done' ? 'completed' : item.status === 'in_progress' ? 'in-progress' : 'needs-review'}`}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
-                      <cfg.Icon size={9} />
-                      {cfg.label}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>{a.actorName || 'System'}</span>
+                    {a.actorOrg && <span style={{ fontSize: '10.5px', color: 'var(--text-3)' }}>· {a.actorOrg}</span>}
+                    <span className="mono" style={{ fontSize: '10px', color: 'var(--text-3)', marginLeft: 'auto', whiteSpace: 'nowrap' }} title={new Date(a.createdAt).toLocaleString()}>
+                      {activityTimeAgo(a.createdAt)}
                     </span>
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-2)' }}>
-                    {product?.name || 'Unknown product'}
-                    <span style={{ margin: '0 6px', color: 'var(--text-3)' }}>·</span>
-                    <span className="mono" style={{ fontSize: '10px' }}>{timeAgo(item.updatedAt)}</span>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text)' }}>
+                    {a.action}
+                    {a.productName && <span style={{ color: 'var(--text-2)' }}> · {a.productName}</span>}
                   </div>
+                  {a.detail && (
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-2)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {a.detail}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -411,7 +419,7 @@ export default function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '12px', marginBottom: '20px' }}>
         {loading
           ? <div className="skeleton" style={{ borderRadius: 'var(--radius)', minHeight: '280px' }} />
-          : <RecentActivity products={products} items={items} />
+          : <RecentActivity />
         }
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <DeadlineCard label="Vulnerability Reporting" article="Article 14 — CRA" date="11 September 2026" days={reportD}  urgent={reportD < 180} />

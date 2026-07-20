@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getTicket, getTicketActivity, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport, transitionTicket, deleteTicket } from '../api/vmApi';
+import { getTicket, getTicketActivity, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport, transitionTicket, deleteTicket, updateTicket } from '../api/vmApi';
 import { stageLabel } from '../utils/lifecycleConfig';
 import ConfirmDialog from '../../shared/ConfirmDialog';
 import StatusBadge, { ClassificationBadge } from '../components/StatusBadge';
@@ -35,17 +35,58 @@ export default function TicketDetail() {
   const [moveBackTo, setMoveBackTo]         = useState<string | null>(null);
   const [confirmDeleteCase, setConfirmDeleteCase] = useState(false);
   const [actionError, setActionError]       = useState('');
+  const [editing, setEditing]               = useState(false);
+  const [form, setForm]                     = useState<any>(null);
+  const [saving, setSaving]                 = useState(false);
+
+  function startEdit() {
+    setActionError('');
+    setForm({
+      title:           ticket.title || '',
+      description:     ticket.description || '',
+      reporterName:    ticket.reporterName || '',
+      reporterContact: ticket.reporterContact || '',
+      environment:     ticket.environment || '',
+      caseManager:     ticket.caseManager || '',
+      sourceChannel:   ticket.sourceChannel || 'email',
+      isIncident:      !!ticket.isIncident,
+      affectedProducts: (ticket.affectedProducts?.length ? ticket.affectedProducts : [{ name: '', version: '' }])
+        .map((p: any) => ({ name: p.name || '', version: p.version || '' })),
+    });
+    setEditing(true);
+  }
+
+  async function saveEdit() {
+    setSaving(true);
+    setActionError('');
+    try {
+      await updateTicket(id!, {
+        ...form,
+        affectedProducts: form.affectedProducts.filter((p: any) => p.name || p.version),
+        expectedUpdatedAt: (ticket as any).updatedAt,
+      });
+      setEditing(false);
+      setForm(null);
+      load();
+    } catch (err: any) {
+      setActionError(err.response?.data?.message || 'Could not save the changes');
+      if (err.response?.status === 409) { setEditing(false); setForm(null); load(); }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function moveBack() {
     if (!moveBackTo) return;
     setActionError('');
     try {
-      await transitionTicket(id!, { toStatus: moveBackTo, note: 'Revising an earlier decision' });
+      await transitionTicket(id!, { toStatus: moveBackTo, note: 'Revising an earlier decision', expectedUpdatedAt: (ticket as any).updatedAt });
       setMoveBackTo(null);
       load();
     } catch (err: any) {
       setMoveBackTo(null);
       setActionError(err.response?.data?.message || 'Could not move the case back');
+      if (err.response?.status === 409) load();
     }
   }
 
@@ -142,7 +183,7 @@ export default function TicketDetail() {
           </div>
         )}
         {ticket.affectedProducts?.length > 0 && (
-          <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 6 }}>
             {ticket.affectedProducts.map((p, i) => (
               <span key={i} style={{ marginRight: 14 }}>
                 <span style={{ color: 'var(--text)' }}>{p.name}</span>
@@ -151,6 +192,14 @@ export default function TicketDetail() {
             ))}
           </div>
         )}
+        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-3)' }}>
+          <span>Reported by <span style={{ color: 'var(--text)', fontWeight: 600 }}>{ticket.reporterName || 'Anonymous'}</span>
+            {ticket.reporterContact && <span style={{ color: 'var(--text-2)' }}> · {ticket.reporterContact}</span>}
+          </span>
+          <span>via <span style={{ color: 'var(--text-2)' }}>{ticket.sourceChannel?.replace(/_/g, ' ')}</span></span>
+          <span>on <span style={{ color: 'var(--text-2)' }}>{new Date(ticket.createdAt).toLocaleDateString()}</span></span>
+          <span>Owner: <span style={{ color: 'var(--text-2)' }}>{ticket.caseManager || 'Unassigned'}</span></span>
+        </div>
       </div>
 
       {/* Lifecycle position — click an earlier stage to move the case back */}
@@ -195,9 +244,21 @@ export default function TicketDetail() {
         ))}
       </div>
 
-      {/* Overview */}
-      {tab === 'overview' && (
+      {/* Overview — editable intake */}
+      {tab === 'overview' && editing && (
+        <IntakeEditor
+          form={form}
+          setForm={setForm}
+          saving={saving}
+          onSave={saveEdit}
+          onCancel={() => { setEditing(false); setForm(null); setActionError(''); }}
+        />
+      )}
+      {tab === 'overview' && !editing && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost btn-sm" onClick={startEdit}>Edit Details</button>
+          </div>
           <Field label="Title" value={ticket.title || '—'} />
           <Field label="Description" value={ticket.description} pre />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
@@ -394,6 +455,93 @@ function Field({ label, value, pre }: { label: string; value?: React.ReactNode; 
       </div>
       <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, whiteSpace: pre ? 'pre-wrap' : undefined }}>
         {value || '—'}
+      </div>
+    </div>
+  );
+}
+
+const SOURCE_CHANNELS = ['email', 'phone', 'internal_testing', 'supplier', 'other'];
+
+// Edit the intake/receipt details after logging. Only case-metadata fields
+// are editable here — workflow state (CVSS, classification, stage) is driven
+// by the decision card, never a free-form form.
+function IntakeEditor({ form, setForm, saving, onSave, onCancel }: any) {
+  const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
+  const setProduct = (i: number, k: string, v: string) =>
+    setForm((f: any) => ({ ...f, affectedProducts: f.affectedProducts.map((p: any, j: number) => j === i ? { ...p, [k]: v } : p) }));
+  const addProduct    = () => setForm((f: any) => ({ ...f, affectedProducts: [...f.affectedProducts, { name: '', version: '' }] }));
+  const removeProduct = (i: number) => setForm((f: any) => ({ ...f, affectedProducts: f.affectedProducts.filter((_: any, j: number) => j !== i) }));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div>
+        <label className="label">Title</label>
+        <input className="input" value={form.title} onChange={e => set('title', e.target.value)} />
+      </div>
+      <div>
+        <label className="label">Description</label>
+        <textarea className="input" rows={5} value={form.description} onChange={e => set('description', e.target.value)} style={{ resize: 'vertical' }} />
+      </div>
+
+      <div>
+        <div className="section-label" style={{ marginBottom: 10 }}>Affected Products</div>
+        {form.affectedProducts.map((p: any, i: number) => (
+          <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-end' }}>
+            <div style={{ flex: 2 }}>
+              {i === 0 && <label className="label">Product Name</label>}
+              <input className="input" value={p.name} onChange={e => setProduct(i, 'name', e.target.value)} placeholder="e.g. GH180" />
+            </div>
+            <div style={{ flex: 1 }}>
+              {i === 0 && <label className="label">Version / Firmware</label>}
+              <input className="input" value={p.version} onChange={e => setProduct(i, 'version', e.target.value)} placeholder="e.g. fw2.1" />
+            </div>
+            {form.affectedProducts.length > 1 && (
+              <button type="button" className="btn btn-danger btn-sm" onClick={() => removeProduct(i)} style={{ marginBottom: 1 }}>✕</button>
+            )}
+          </div>
+        ))}
+        <button type="button" className="btn btn-ghost btn-sm" onClick={addProduct}>+ Add Product</button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div>
+          <label className="label">Reporter Name</label>
+          <input className="input" value={form.reporterName} onChange={e => set('reporterName', e.target.value)} placeholder="Researcher / reporter name" />
+        </div>
+        <div>
+          <label className="label">Reporter Contact</label>
+          <input className="input" value={form.reporterContact} onChange={e => set('reporterContact', e.target.value)} placeholder="Email or phone" />
+        </div>
+      </div>
+
+      <div>
+        <label className="label">Deployment Environment</label>
+        <input className="input" value={form.environment} onChange={e => set('environment', e.target.value)} placeholder="Operational / deployment context" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div>
+          <label className="label">Received Via</label>
+          <select className="input" value={form.sourceChannel} onChange={e => set('sourceChannel', e.target.value)}>
+            {SOURCE_CHANNELS.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">Case Manager (PSSO)</label>
+          <input className="input" value={form.caseManager} onChange={e => set('caseManager', e.target.value)} placeholder="Owner" />
+        </div>
+        <div>
+          <label className="label">Case Type</label>
+          <select className="input" value={form.isIncident ? 'incident' : 'vulnerability'} onChange={e => set('isIncident', e.target.value === 'incident')}>
+            <option value="vulnerability">Vulnerability report</option>
+            <option value="incident">Serious security incident</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button className="btn btn-primary btn-sm" onClick={onSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
+        <button className="btn btn-ghost btn-sm" onClick={onCancel} disabled={saving}>Cancel</button>
       </div>
     </div>
   );

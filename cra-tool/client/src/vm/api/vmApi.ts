@@ -5,10 +5,12 @@ import type { Ticket, Report, Advisory, TicketNotification } from '../../types';
 export const getTickets       = ()                 => api.get<Ticket[]>('/vm/tickets');
 export const getTicket        = (id: string)       => api.get<Ticket>(`/vm/tickets/${id}`);
 export const createTicket     = (data: Partial<Ticket>)             => api.post<Ticket>('/vm/tickets', data);
-export const updateTicket     = (id: string, data: Partial<Ticket>) => api.patch<Ticket>(`/vm/tickets/${id}`, data);
-export const transitionTicket = (id: string, data: { toStatus: string; note?: string; classification?: string; cvss?: any }) =>
+// `expectedUpdatedAt` carries the ticket's last-seen updatedAt so the server
+// can reject a write that would clobber another officer's concurrent change.
+export const updateTicket     = (id: string, data: Partial<Ticket> & { expectedUpdatedAt?: string }) => api.patch<Ticket>(`/vm/tickets/${id}`, data);
+export const transitionTicket = (id: string, data: { toStatus: string; note?: string; classification?: string; cvss?: any; expectedUpdatedAt?: string }) =>
   api.post<Ticket>(`/vm/tickets/${id}/transition`, data);
-export const updateStageData = (id: string, data: Pick<Partial<Ticket>, 'remediation' | 'advisoryChecks' | 'disclosure'>) =>
+export const updateStageData = (id: string, data: Pick<Partial<Ticket>, 'remediation' | 'advisoryChecks' | 'disclosure'> & { expectedUpdatedAt?: string }) =>
   api.patch<Ticket>(`/vm/tickets/${id}/stage-data`, data);
 export const notifyCert = (id: string, data: { note?: string } = {}) =>
   api.post<Ticket>(`/vm/tickets/${id}/notify-cert`, data);

@@ -91,6 +91,7 @@ export default function TicketQueue() {
               <th>Ticket #</th>
               <th>Affected Products</th>
               <th>Status</th>
+              <th>Reporter</th>
               <th>Source</th>
               <th>CRA 24h Deadline</th>
               <th>Created</th>
@@ -129,6 +130,9 @@ export default function TicketQueue() {
                       <ClassificationBadge classification={t.classification} />
                     </div>
                   </td>
+                  <td style={{ fontSize: 12.5, color: 'var(--text)' }}>
+                    {t.reporterName || <span style={{ color: 'var(--text-3)' }}>Anonymous</span>}
+                  </td>
                   <td style={{ fontSize: 12, color: 'var(--text-2)', textTransform: 'capitalize' }}>
                     {t.sourceChannel?.replace('_', ' ')}
                   </td>
@@ -146,7 +150,7 @@ export default function TicketQueue() {
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-3)', padding: '40px 0' }}>
+                <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-3)', padding: '40px 0' }}>
                   {filterStatus
                     ? 'No tickets with this status.'
                     : <>No tickets yet. <Link to="/vm/tickets/new">Log the first one →</Link></>
