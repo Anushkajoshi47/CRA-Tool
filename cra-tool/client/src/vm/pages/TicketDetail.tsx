@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getTicket, getTicketActivity, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport, transitionTicket, deleteTicket, updateTicket } from '../api/vmApi';
 import { stageLabel } from '../utils/lifecycleConfig';
+import { Stack, Row, Grid } from '../../components/primitives/layout';
+import s from './TicketDetail.module.css';
 import ConfirmDialog from '../../shared/ConfirmDialog';
 import StatusBadge, { ClassificationBadge } from '../components/StatusBadge';
 import ClockWidget from '../components/ClockWidget';
@@ -136,70 +138,56 @@ export default function TicketDetail() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-2)' }}>Loading…</div>;
+  if (loading) return <div className={s.loading}>Loading…</div>;
   if (!ticket)  return null;
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 860 }}>
+    <div className={s.page}>
       {/* Breadcrumb */}
-      <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>
-        <Link to="/vm/tickets" style={{ color: 'var(--text-3)' }}>Ticket Queue</Link>
+      <div className={s.breadcrumb}>
+        <Link to="/vm/tickets" className={s.breadcrumbLink}>Ticket Queue</Link>
         {' / '}
-        <span style={{ fontFamily: 'var(--mono)' }}>{ticket.ticketNumber}</span>
+        <span className="mono">{ticket.ticketNumber}</span>
       </div>
 
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 10 }}>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--accent)', fontWeight: 700 }}>
-            {ticket.ticketNumber}
-          </span>
+      <div style={{ marginBottom: 'var(--space-6)' }}>
+        <Row gap={3} style={{ marginBottom: 'var(--space-3)' }}>
+          <span className={s.ticketNo}>{ticket.ticketNumber}</span>
           <StatusBadge status={ticket.status} />
           <ClassificationBadge
             classification={ticket.classification}
             pulse={ticket.classification === 'actively_exploitable' && ticket.status !== 'closed'}
           />
           {ticket.cvss?.score != null && (
-            <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: SEVERITY_COLOR[ticket.cvss.severity] || 'var(--text-2)' }}>
+            <span className={`mono ${s.cvssTag}`} style={{ ['--c' as any]: SEVERITY_COLOR[ticket.cvss.severity] }}>
               CVSS {Number(ticket.cvss.score).toFixed(1)}
             </span>
           )}
-          {ticket.isIncident && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Security Incident
-            </span>
-          )}
-          <button
-            className="btn btn-danger btn-xs"
-            style={{ marginLeft: 'auto' }}
-            onClick={() => setConfirmDeleteCase(true)}
-          >
+          {ticket.isIncident && <span className={s.incident}>Security Incident</span>}
+          <button className="btn btn-danger btn-xs" style={{ marginLeft: 'auto' }} onClick={() => setConfirmDeleteCase(true)}>
             Delete Case
           </button>
-        </div>
-        {ticket.title && (
-          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 8, lineHeight: 1.35 }}>
-            {ticket.title}
-          </div>
-        )}
+        </Row>
+        {ticket.title && <div className={s.title}>{ticket.title}</div>}
         {ticket.affectedProducts?.length > 0 && (
-          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 6 }}>
+          <div className={s.products}>
             {ticket.affectedProducts.map((p, i) => (
               <span key={i} style={{ marginRight: 14 }}>
-                <span style={{ color: 'var(--text)' }}>{p.name}</span>
-                {p.version && <span style={{ color: 'var(--text-3)', marginLeft: 5 }}>{p.version}</span>}
+                <span className={s.productName}>{p.name}</span>
+                {p.version && <span className={s.productVer}>{p.version}</span>}
               </span>
             ))}
           </div>
         )}
-        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-3)' }}>
-          <span>Reported by <span style={{ color: 'var(--text)', fontWeight: 600 }}>{ticket.reporterName || 'Anonymous'}</span>
-            {ticket.reporterContact && <span style={{ color: 'var(--text-2)' }}> · {ticket.reporterContact}</span>}
+        <Row gap={5} className={s.metaRow}>
+          <span>Reported by <span className={s.metaStrong}>{ticket.reporterName || 'Anonymous'}</span>
+            {ticket.reporterContact && <span className={s.metaValue}> · {ticket.reporterContact}</span>}
           </span>
-          <span>via <span style={{ color: 'var(--text-2)' }}>{ticket.sourceChannel?.replace(/_/g, ' ')}</span></span>
-          <span>on <span style={{ color: 'var(--text-2)' }}>{new Date(ticket.createdAt).toLocaleDateString()}</span></span>
-          <span>Owner: <span style={{ color: 'var(--text-2)' }}>{ticket.caseManager || 'Unassigned'}</span></span>
-        </div>
+          <span>via <span className={s.metaValue}>{ticket.sourceChannel?.replace(/_/g, ' ')}</span></span>
+          <span>on <span className={s.metaValue}>{new Date(ticket.createdAt).toLocaleDateString()}</span></span>
+          <span>Owner: <span className={s.metaValue}>{ticket.caseManager || 'Unassigned'}</span></span>
+        </Row>
       </div>
 
       {/* Lifecycle position — click an earlier stage to move the case back */}
@@ -209,9 +197,7 @@ export default function TicketDetail() {
         classification={ticket.classification}
         onStageClick={key => setMoveBackTo(key)}
       />
-      {actionError && (
-        <div style={{ color: '#f87171', fontSize: 12, margin: '-12px 0 16px' }}>{actionError}</div>
-      )}
+      {actionError && <div className={s.actionError}>{actionError}</div>}
 
       {/* CRA Clock */}
       <ClockWidget
@@ -221,25 +207,11 @@ export default function TicketDetail() {
       />
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 28 }}>
+      <div className={s.tabs}>
         {TABS.map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              padding: '9px 18px', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer',
-              fontWeight: tab === t ? 600 : 400,
-              color: tab === t ? 'var(--accent)' : 'var(--text-2)',
-              borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent',
-              textTransform: 'capitalize',
-            }}
-          >
+          <button key={t} onClick={() => setTab(t)} className={`${s.tab} ${tab === t ? s.tabActive : ''}`}>
             {t}
-            {t === 'reports' && reports.length > 0 && (
-              <span style={{ marginLeft: 6, fontSize: 10, background: 'var(--border)', borderRadius: 10, padding: '1px 6px', color: 'var(--text-2)' }}>
-                {reports.length}
-              </span>
-            )}
+            {t === 'reports' && reports.length > 0 && <span className={s.tabCount}>{reports.length}</span>}
           </button>
         ))}
       </div>
@@ -255,24 +227,24 @@ export default function TicketDetail() {
         />
       )}
       {tab === 'overview' && !editing && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Stack gap={5}>
+          <Row justify="end">
             <button className="btn btn-ghost btn-sm" onClick={startEdit}>Edit Details</button>
-          </div>
+          </Row>
           <Field label="Title" value={ticket.title || '—'} />
           <Field label="Description" value={ticket.description} pre />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <Grid cols={4} gap={4}>
             <Field label="Reporter"          value={ticket.reporterName || '—'} />
             <Field label="Reporter Contact"  value={ticket.reporterContact || '—'} />
             <Field label="Source Channel"    value={ticket.sourceChannel?.replace(/_/g, ' ')} />
             <Field label="Date Reported"     value={new Date(ticket.createdAt).toLocaleDateString()} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 16 }}>
+          </Grid>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 'var(--space-4)' }}>
             <Field label="Deployment Environment" value={ticket.environment || '—'} />
             <Field label="Case Manager (PSSO)" value={ticket.caseManager || 'Unassigned'} />
             <Field label="Case Type"           value={ticket.isIncident ? 'Security Incident' : 'Vulnerability'} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <Grid cols={4} gap={4}>
             <Field label="Classification" value={
               ticket.classification === 'actively_exploitable' ? 'Actively Exploitable'
               : ticket.classification === 'exploitable' ? 'Exploitable'
@@ -281,18 +253,18 @@ export default function TicketDetail() {
             <Field label="CVSS" value={ticket.cvss?.score != null ? `${Number(ticket.cvss.score).toFixed(1)} (${ticket.cvss.severity})` : '—'} />
             <Field label="CERT Notified" value={ticket.certNotifiedAt ? new Date(ticket.certNotifiedAt).toLocaleDateString() : '—'} />
             <Field label="Outcome" value={ticket.closedReason ? ticket.closedReason.replace(/_/g, ' ') : 'Open'} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          </Grid>
+          <Grid cols={2} gap={4}>
             <Field label="Created"      value={new Date(ticket.createdAt).toLocaleString()} />
             <Field label="Last Updated" value={new Date(ticket.updatedAt).toLocaleString()} />
-          </div>
+          </Grid>
           {ticket.clockStartedAt && (
             <Field label="CRA Clock Started" value={new Date(ticket.clockStartedAt).toLocaleString()} />
           )}
           {ticket.mitigationDeployedAt && (
             <Field label="Mitigation Deployed" value={new Date(ticket.mitigationDeployedAt).toLocaleString()} />
           )}
-        </div>
+        </Stack>
       )}
 
       {/* Activity Timeline — the case's audit trail */}
@@ -301,30 +273,22 @@ export default function TicketDetail() {
       {/* Communications — message flows from the VDMA process graph */}
       {tab === 'communications' && (
         notifications.length === 0 ? (
-          <p style={{ color: 'var(--text-3)', fontSize: 13 }}>No communications logged yet.</p>
+          <p className={s.tabEmpty}>No communications logged yet.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Stack gap={3}>
             {notifications.map(n => {
               const meta = AUDIENCE_META[n.audience] || { label: n.audience, color: '#a8a8c8' };
               return (
-                <div key={n._id} className="card" style={{ padding: '12px 16px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <span style={{
-                    fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
-                    color: meta.color, background: `${meta.color}18`, border: `1px solid ${meta.color}44`,
-                    borderRadius: 20, padding: '3px 9px', whiteSpace: 'nowrap', flexShrink: 0,
-                  }}>
-                    {meta.label}
-                  </span>
+                <Row key={n._id} gap={3} align="start" wrap={false} className={`card ${s.commCard}`}>
+                  <span className={s.commBadge} style={{ ['--c' as any]: meta.color }}>{meta.label}</span>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 13, color: 'var(--text)', margin: 0, lineHeight: 1.55 }}>{n.message}</p>
-                    <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 4 }}>
-                      {new Date(n.createdAt).toLocaleString()}
-                    </div>
+                    <p className={s.commMsg}>{n.message}</p>
+                    <div className={s.commTime}>{new Date(n.createdAt).toLocaleString()}</div>
                   </div>
-                </div>
+                </Row>
               );
             })}
-          </div>
+          </Stack>
         )
       )}
 
@@ -352,64 +316,43 @@ export default function TicketDetail() {
           ) : (
             <>
               {ticket.clockStartedAt ? (
-                <button
-                  className="btn btn-primary btn-sm"
-                  style={{ marginBottom: 20 }}
-                  onClick={() => setShowReportForm(true)}
-                >
+                <button className="btn btn-primary btn-sm" style={{ marginBottom: 'var(--space-5)' }} onClick={() => setShowReportForm(true)}>
                   + New Report
                 </button>
               ) : (
-                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>
+                <p className={s.repNote}>
                   Reports are available once the CRA clock starts (active exploitation confirmed).
                 </p>
               )}
               {reports.length === 0 ? (
-                <p style={{ color: 'var(--text-3)', fontSize: 13 }}>No reports yet.</p>
+                <p className={s.tabEmpty}>No reports yet.</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <Stack gap={3}>
                   {reports.map(r => (
-                    <div key={r._id} className="card" style={{ padding: '16px 20px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                          {r.type.replace('_', ' ')} Report
-                        </span>
+                    <div key={r._id} className={`card ${s.repCard}`}>
+                      <Row gap={3} style={{ marginBottom: 'var(--space-2)' }}>
+                        <span className={s.repType}>{r.type.replace('_', ' ')} Report</span>
                         {r.submittedAt
                           ? <span className="pill pill-done">Submitted</span>
-                          : <span className="pill pill-pending">Draft</span>
-                        }
-                        {r.dueAt && (
-                          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-3)' }}>
-                            Due: {new Date(r.dueAt).toLocaleString()}
-                          </span>
-                        )}
-                      </div>
-                      <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                        {r.content}
-                      </p>
-                      <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
-                        <button className="btn btn-ghost btn-xs" onClick={() => setEditingReport(r)}>
-                          Edit
-                        </button>
+                          : <span className="pill pill-pending">Draft</span>}
+                        {r.dueAt && <span className={s.repDue}>Due: {new Date(r.dueAt).toLocaleString()}</span>}
+                      </Row>
+                      <p className={s.repContent}>{r.content}</p>
+                      <Row gap={2} style={{ marginTop: 'var(--space-3)' }}>
+                        <button className="btn btn-ghost btn-xs" onClick={() => setEditingReport(r)}>Edit</button>
                         {!r.submittedAt && (
-                          <button className="btn btn-primary btn-xs" onClick={() => markSubmitted(r)}>
-                            Mark as Submitted
-                          </button>
+                          <button className="btn btn-primary btn-xs" onClick={() => markSubmitted(r)}>Mark as Submitted</button>
                         )}
                         {!r.submittedAt && (
-                          <button className="btn btn-danger btn-xs" onClick={() => setDeletingReport(r)}>
-                            Delete
-                          </button>
+                          <button className="btn btn-danger btn-xs" onClick={() => setDeletingReport(r)}>Delete</button>
                         )}
                         {r.submittedAt && (
-                          <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto' }}>
-                            Submitted {new Date(r.submittedAt).toLocaleString()}
-                          </span>
+                          <span className={s.repSubmitted}>Submitted {new Date(r.submittedAt).toLocaleString()}</span>
                         )}
-                      </div>
+                      </Row>
                     </div>
                   ))}
-                </div>
+                </Stack>
               )}
             </>
           )}
@@ -450,12 +393,8 @@ export default function TicketDetail() {
 function Field({ label, value, pre }: { label: string; value?: React.ReactNode; pre?: boolean }) {
   return (
     <div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, whiteSpace: pre ? 'pre-wrap' : undefined }}>
-        {value || '—'}
-      </div>
+      <div className={s.fieldLabel}>{label}</div>
+      <div className={`${s.fieldValue} ${pre ? s.fieldValuePre : ''}`}>{value || '—'}</div>
     </div>
   );
 }

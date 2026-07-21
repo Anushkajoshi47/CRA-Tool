@@ -34,6 +34,44 @@
   --radius:      12px;
   --radius-sm:   8px;
   --ease:        cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Spacing scale (4px base) — the single source for gaps/margins/padding.
+     Layout primitives (Stack/Row/Grid) and .module.css files reference these
+     so spacing is consistent and adjustable in one place. ─────────────────── */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ── Type scale — retires per-element hardcoded font sizes. Adjusting the
+     app's overall text size becomes a change here, not a global zoom hack. ── */
+  --text-2xs:  9.5px;
+  --text-xs:   10.5px;
+  --text-sm:   12px;
+  --text-base: 13px;
+  --text-md:   15px;
+  --text-lg:   17px;
+  --text-xl:   20px;
+  --text-2xl:  22px;
+  --text-3xl:  28px;
+
+  /* ── Font weights ────────────────────────────────────────────────────── */
+  --weight-normal:    400;
+  --weight-medium:    500;
+  --weight-semibold:  600;
+  --weight-bold:      700;
+  --weight-extrabold: 800;
+
+  /* ── Letter-spacing for uppercase labels ─────────────────────────────── */
+  --tracking-label: 0.08em;
+  --tracking-wide:  0.12em;
   /* theme-dependent surfaces & effects */
   color-scheme:      dark;
   --accent-contrast: #000;

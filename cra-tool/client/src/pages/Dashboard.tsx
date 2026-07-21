@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { Stack, Row, Grid } from '../components/primitives/layout';
+import s from './Dashboard.module.css';
 
 /* ── Constants ──────────────────────────────────────────────── */
 const REPORT_DL  = new Date('2026-09-11');
@@ -211,46 +213,41 @@ function RecentActivity() {
   }, []);
 
   return (
-    <div className="card card-flat" style={{ padding: '24px' }}>
-      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>Recent Activity</div>
-      <div style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: '20px' }}>Who changed what across the team</div>
+    <div className={`card card-flat ${s.raCard}`}>
+      <div className={s.raTitle}>Recent Activity</div>
+      <div className={s.raSub}>Who changed what across the team</div>
 
       {loaded && feed.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-3)', fontSize: '12px' }}>
-          No activity yet. Register a product or update requirement statuses.
-        </div>
+        <div className={s.raEmpty}>No activity yet. Register a product or update requirement statuses.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+        <Stack gap={0}>
           {feed.map((a, idx) => {
             const color = ACTIVITY_COLOR[a.action] || '#6e6e8a';
+            const last  = idx === feed.length - 1;
             return (
-              <div key={a._id || idx} style={{ display: 'flex', gap: '12px', paddingTop: idx === 0 ? '0' : '14px', paddingBottom: '14px', borderBottom: idx < feed.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, paddingTop: '2px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}66`, flexShrink: 0 }} />
-                  {idx < feed.length - 1 && <div style={{ width: '1px', flex: 1, background: 'var(--border)', marginTop: '6px', minHeight: '24px' }} />}
+              <div key={a._id || idx} className={s.raRow} style={{ ['--c' as any]: color }}>
+                <div className={s.raRail}>
+                  <div className={s.raDot} />
+                  {!last && <div className={s.raLine} />}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>{a.actorName || 'System'}</span>
-                    {a.actorOrg && <span style={{ fontSize: '10.5px', color: 'var(--text-3)' }}>· {a.actorOrg}</span>}
-                    <span className="mono" style={{ fontSize: '10px', color: 'var(--text-3)', marginLeft: 'auto', whiteSpace: 'nowrap' }} title={new Date(a.createdAt).toLocaleString()}>
+                <Stack gap={0} style={{ flex: 1 }}>
+                  <Row gap={2} align="baseline" style={{ marginBottom: 3 }}>
+                    <span className={s.raActor}>{a.actorName || 'System'}</span>
+                    {a.actorOrg && <span className={s.raOrg}>· {a.actorOrg}</span>}
+                    <span className={`mono ${s.raTime}`} title={new Date(a.createdAt).toLocaleString()}>
                       {activityTimeAgo(a.createdAt)}
                     </span>
-                  </div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--text)' }}>
+                  </Row>
+                  <div className={s.raAction}>
                     {a.action}
-                    {a.productName && <span style={{ color: 'var(--text-2)' }}> · {a.productName}</span>}
+                    {a.productName && <span className={s.raProduct}> · {a.productName}</span>}
                   </div>
-                  {a.detail && (
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-2)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {a.detail}
-                    </div>
-                  )}
-                </div>
+                  {a.detail && <div className={s.raDetail}>{a.detail}</div>}
+                </Stack>
               </div>
             );
           })}
-        </div>
+        </Stack>
       )}
     </div>
   );
@@ -259,30 +256,24 @@ function RecentActivity() {
 /* ── Deadline card ──────────────────────────────────────────── */
 function DeadlineCard({ label, article, date, days, urgent }) {
   const color = urgent ? 'var(--warning)' : 'var(--accent)';
-  const hex   = urgent ? '#f97316' : '#00c8c8';
   const borderClass = urgent ? 'card-warning' : 'card-accent';
   return (
-    <div className={`card card-flat ${borderClass}`} style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div className={`card card-flat ${borderClass}`} style={{ padding: 'var(--space-6)', ['--c' as any]: color }}>
+      <Row gap={0} justify="between" align="start" wrap={false}>
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, boxShadow: `0 0 8px ${hex}88` }} />
-            <span style={{ fontSize: '10px', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              {urgent ? 'Urgent' : 'Scheduled'}
-            </span>
-          </div>
-          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px', lineHeight: 1.3 }}>{label}</div>
-          <div className="mono" style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: '2px' }}>{article}</div>
-          <div className="mono" style={{ fontSize: '11px', color: 'var(--text-3)' }}>{date}</div>
+          <Row gap={2} style={{ marginBottom: 'var(--space-2)' }}>
+            <div className={s.deadlineDot} />
+            <span className={s.deadlineTag}>{urgent ? 'Urgent' : 'Scheduled'}</span>
+          </Row>
+          <div className={s.deadlineLabel}>{label}</div>
+          <div className={`mono ${s.deadlineMeta}`} style={{ marginBottom: 2 }}>{article}</div>
+          <div className={`mono ${s.deadlineMeta} ${s.deadlineMetaDim}`}>{date}</div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div className={`mono${urgent ? ' urgent-pulse' : ''}`}
-            style={{ fontSize: '48px', fontWeight: 700, color, lineHeight: 1, letterSpacing: '-2px', filter: `drop-shadow(0 0 12px ${hex}44)` }}>
-            {days}
-          </div>
-          <div className="mono" style={{ fontSize: '9px', color: 'var(--text-3)', letterSpacing: '0.15em', marginTop: '3px' }}>DAYS</div>
+          <div className={`mono ${s.deadlineDays} ${urgent ? 'urgent-pulse' : ''}`}>{days}</div>
+          <div className={`mono ${s.deadlineDaysLabel}`}>DAYS</div>
         </div>
-      </div>
+      </Row>
     </div>
   );
 }
@@ -290,20 +281,16 @@ function DeadlineCard({ label, article, date, days, urgent }) {
 /* ── Stat card ──────────────────────────────────────────────── */
 function StatCard({ label, value, sub, loading, icon, color = 'var(--accent)' }: any) {
   return (
-    <div className="card" style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {icon}
-        </div>
-        {sub !== undefined && !loading && (
-          <span style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 600, fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.04)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}>{sub}</span>
-        )}
-      </div>
+    <div className={`card ${s.statCard}`} style={{ ['--c' as any]: color }}>
+      <Row gap={0} justify="between" align="start" style={{ marginBottom: 'var(--space-4)' }}>
+        <div className={s.statIcon}>{icon}</div>
+        {sub !== undefined && !loading && <span className={s.statSub}>{sub}</span>}
+      </Row>
       {loading
-        ? <div className="skeleton" style={{ height: '42px', width: '55%', borderRadius: '6px' }} />
-        : <div className="mono" style={{ fontSize: '40px', fontWeight: 700, color, lineHeight: 1, letterSpacing: '-1.5px' }}>{value}</div>
+        ? <div className="skeleton" style={{ height: 42, width: '55%', borderRadius: 6 }} />
+        : <div className={`mono ${s.statValue}`}>{value}</div>
       }
-      <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '8px', fontWeight: 600 }}>{label}</div>
+      <div className={s.statLabel}>{label}</div>
     </div>
   );
 }
@@ -316,18 +303,15 @@ function QuickActions({ navigate }) {
     { label: 'Open Compliance',     desc: 'Update requirement statuses',   color: 'var(--success)',icon: <ShieldCheckIcon />, onClick: () => navigate('/compliance') },
   ];
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+    <Grid cols={3} gap={3}>
       {actions.map(a => (
-        <button key={a.label} onClick={a.onClick} className="card card-click"
-          style={{ padding: '20px', textAlign: 'left', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', cursor: 'pointer', width: '100%' }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: a.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', color: a.color, marginBottom: '12px' }}>
-            {a.icon}
-          </div>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{a.label}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-2)' }}>{a.desc}</div>
+        <button key={a.label} onClick={a.onClick} className={`card card-click ${s.actionBtn}`} style={{ ['--c' as any]: a.color }}>
+          <div className={s.actionIcon}>{a.icon}</div>
+          <div className={s.actionLabel}>{a.label}</div>
+          <div className={s.actionDesc}>{a.desc}</div>
         </button>
       ))}
-    </div>
+    </Grid>
   );
 }
 
@@ -363,26 +347,24 @@ export default function Dashboard() {
   const name      = email ? email.split('@')[0] : 'User';
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className={s.page}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '12px' }}>
+      <Row justify="between" align="center" gap={3} style={{ marginBottom: 'var(--space-8)' }}>
         <div>
-          <div style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>
-            Executive Overview
-          </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1.2 }}>
-            Good morning, <span style={{ color: 'var(--accent)', textTransform: 'capitalize' }}>{name}</span>
+          <div className={s.eyebrow}>Executive Overview</div>
+          <h1 className={s.title}>
+            Good morning, <span className={s.titleName}>{name}</span>
           </h1>
-          <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '4px' }}>
+          <div className={s.subtitle}>
             Innomotics Perfect Harmony GH180 — CRA Compliance Dashboard
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <Row gap={2} wrap={false}>
           <button className="btn btn-ghost btn-sm" onClick={() => navigate('/requirements')}>Requirements</button>
           <button className="btn btn-primary btn-sm" onClick={() => navigate('/product/new')}>+ Add Product</button>
-        </div>
-      </div>
+        </Row>
+      </Row>
 
       {/* 4 Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>

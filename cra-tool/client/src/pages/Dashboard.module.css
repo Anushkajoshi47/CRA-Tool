@@ -1,0 +1,51 @@
+/* Scoped styles for the CRA compliance dashboard. Card/text chrome only —
+   the SVG graphics (score rings, journey stepper, icons) keep their inline
+   attributes, since those are drawing instructions, not styling. */
+
+.page { padding: var(--space-8) var(--space-10); max-width: 1200px; margin: 0 auto; }
+
+.eyebrow  { font-size: var(--text-xs); color: var(--text-2); font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-bottom: var(--space-1); }
+.title    { font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--text); letter-spacing: -0.03em; line-height: 1.2; margin: 0; }
+.titleName { color: var(--accent); text-transform: capitalize; }
+.subtitle { font-size: var(--text-sm); color: var(--text-2); margin-top: var(--space-1); }
+.sectionCount { font-family: var(--mono); font-size: var(--text-2xs); color: var(--text-3); }
+
+/* ── Stat card ─────────────────────────────────────────────── */
+.statCard  { padding: var(--space-6); }
+.statIcon  { width: 36px; height: 36px; border-radius: 10px; background: color-mix(in srgb, var(--c) 9%, transparent); display: flex; align-items: center; justify-content: center; }
+.statSub   { font-size: var(--text-xs); color: var(--text-2); font-weight: var(--weight-semibold); font-family: var(--mono); background: var(--input-bg); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border); }
+.statValue { font-family: var(--mono); font-size: 40px; font-weight: var(--weight-bold); color: var(--c); line-height: 1; letter-spacing: -1.5px; }
+.statLabel { font-size: var(--text-base); color: var(--text-2); margin-top: var(--space-2); font-weight: var(--weight-semibold); }
+
+/* ── Deadline card ─────────────────────────────────────────── */
+.deadlineDot   { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px color-mix(in srgb, var(--c) 53%, transparent); }
+.deadlineTag   { font-size: var(--text-2xs); font-weight: var(--weight-bold); color: var(--c); text-transform: uppercase; letter-spacing: var(--tracking-label); }
+.deadlineLabel { font-size: 14px; font-weight: var(--weight-bold); color: var(--text); margin-bottom: var(--space-1); line-height: 1.3; }
+.deadlineMeta  { font-size: var(--text-xs); color: var(--text-2); }
+.deadlineMetaDim { color: var(--text-3); }
+.deadlineDays  { font-family: var(--mono); font-size: 48px; font-weight: var(--weight-bold); color: var(--c); line-height: 1; letter-spacing: -2px; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--c) 27%, transparent)); }
+.deadlineDaysLabel { font-family: var(--mono); font-size: 9px; color: var(--text-3); letter-spacing: 0.15em; margin-top: 3px; }
+
+/* ── Quick actions ─────────────────────────────────────────── */
+.actionBtn  { padding: var(--space-5); text-align: left; width: 100%; }
+.actionIcon { width: 32px; height: 32px; border-radius: 8px; background: color-mix(in srgb, var(--c) 9%, transparent); color: var(--c); display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-3); }
+.actionLabel { font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--text); margin-bottom: 3px; }
+.actionDesc  { font-size: var(--text-xs); color: var(--text-2); }
+
+/* ── Recent activity feed ──────────────────────────────────── */
+.raCard  { padding: var(--space-6); }
+.raTitle { font-size: var(--text-base); font-weight: var(--weight-bold); color: var(--text); margin-bottom: var(--space-1); }
+.raSub   { font-size: var(--text-xs); color: var(--text-2); margin-bottom: var(--space-5); }
+.raEmpty { text-align: center; padding: var(--space-6); color: var(--text-3); font-size: var(--text-sm); }
+.raRow   { display: flex; gap: var(--space-3); padding: 14px 0; }
+.raRow:first-child { padding-top: 0; }
+.raRow:not(:last-child) { border-bottom: 1px solid var(--border); }
+.raRail  { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding-top: 2px; }
+.raDot   { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 6px color-mix(in srgb, var(--c) 40%, transparent); flex-shrink: 0; }
+.raLine  { width: 1px; flex: 1; background: var(--border); margin-top: 6px; min-height: 24px; }
+.raActor { font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--text); }
+.raOrg   { font-size: var(--text-xs); color: var(--text-3); }
+.raTime  { font-size: var(--text-2xs); color: var(--text-3); margin-left: auto; white-space: nowrap; }
+.raAction { font-size: var(--text-xs); color: var(--text); }
+.raProduct { color: var(--text-2); }
+.raDetail { font-size: var(--text-2xs); color: var(--text-2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

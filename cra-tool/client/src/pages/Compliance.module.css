@@ -1,0 +1,136 @@
+/* Requirement list row. Hover states are pure CSS (:hover) rather than JS
+   state — pillar accent via --pc, status-label color via --sc. */
+.row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 20px; height: 58px; position: relative;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 120ms;
+}
+.row:hover { background: var(--hover-bg); }
+
+.accent {
+  position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px;
+  border-radius: 0 2px 2px 0; background: var(--pc);
+  opacity: 0.35; transition: opacity 150ms;
+}
+.row:hover .accent { opacity: 1; }
+
+.index { font-family: var(--mono); font-size: var(--text-xs); color: var(--text-3); width: 22px; text-align: right; flex-shrink: 0; user-select: none; }
+
+.articleRef {
+  font-family: var(--mono); font-size: var(--text-2xs); font-weight: var(--weight-bold);
+  color: var(--pc); background: color-mix(in srgb, var(--pc) 8%, transparent);
+  padding: 2px 9px; border-radius: 4px; flex-shrink: 0;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  border: 1px solid color-mix(in srgb, var(--pc) 13%, transparent);
+  transition: background 150ms;
+}
+.row:hover .articleRef { background: color-mix(in srgb, var(--pc) 14%, transparent); }
+
+.title { flex: 1; font-size: 14px; font-weight: var(--weight-medium); color: var(--text); line-height: 1.35; cursor: pointer; }
+
+.rightGroup { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
+.chipEvidence { font-family: var(--mono); font-size: 9px; color: var(--text-3); border: 1px solid var(--border); padding: 2px 7px; border-radius: 4px; letter-spacing: 0.07em; user-select: none; }
+.chipUrgent   { font-family: var(--mono); font-size: 9px; font-weight: var(--weight-bold); color: var(--warning); background: var(--warning-dim); border: 1px solid rgba(249,115,22,0.25); padding: 2px 7px; border-radius: 4px; letter-spacing: 0.07em; }
+
+.statusLabel {
+  font-family: var(--mono); font-size: var(--text-2xs); font-weight: var(--weight-semibold);
+  color: var(--sc); opacity: 0; transform: translateX(6px);
+  transition: opacity 150ms, transform 150ms; min-width: 80px; text-align: right; user-select: none;
+}
+.row:hover .statusLabel { opacity: 1; transform: translateX(0); }
+
+.arrow { cursor: pointer; flex-shrink: 0; stroke: transparent; transition: stroke 150ms; }
+.row:hover .arrow { stroke: var(--text-2); }
+
+/* ── Page shell ────────────────────────────────────────────── */
+.page   { padding: var(--space-8) var(--space-10); max-width: 1060px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-8); flex-wrap: wrap; gap: var(--space-4); }
+.crumbRow  { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+.crumbSep  { color: var(--border-hi); }
+.crumbName { font-size: var(--text-sm); color: var(--text-2); }
+.pageTitle { font-size: 24px; font-weight: var(--weight-bold); color: var(--text); letter-spacing: -0.04em; margin-bottom: var(--space-2); }
+.progressText { font-size: var(--text-base); color: var(--text-2); }
+.progressDone { color: #00e676; font-weight: var(--weight-bold); }
+.miniBar     { width: 120px; height: 4px; background: var(--track-bg); border-radius: 99px; overflow: hidden; }
+.miniBarFill { height: 100%; border-radius: 99px; transition: width 1s cubic-bezier(0.16,1,0.3,1); }
+
+/* ── Pillar filter tabs ────────────────────────────────────── */
+.pillarTabs { display: flex; gap: var(--space-1); margin-bottom: var(--space-6); flex-wrap: wrap; }
+.pillarTab  {
+  display: flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
+  font-size: var(--text-sm); font-weight: var(--weight-medium); background: transparent; color: var(--text-2);
+  border: 1px solid var(--border); transition: all 150ms;
+}
+.pillarTab[data-active="true"] {
+  font-weight: var(--weight-bold);
+  background: color-mix(in srgb, var(--pc, var(--accent)) 13%, transparent);
+  color: var(--pc, var(--accent));
+  border-color: color-mix(in srgb, var(--pc, var(--accent)) 40%, transparent);
+}
+.pillarDot   { width: 6px; height: 6px; border-radius: 50%; background: var(--pc); opacity: 0.4; }
+.pillarTab[data-active="true"] .pillarDot { opacity: 1; }
+.pillarCount { font-family: var(--mono); font-size: var(--text-2xs); opacity: 0.65; letter-spacing: 0.03em; }
+
+.hint { font-size: var(--text-xs); color: var(--text-3); margin-bottom: var(--space-3); display: flex; align-items: center; gap: var(--space-2); }
+
+/* ── Pillar group ──────────────────────────────────────────── */
+.group      { margin-bottom: var(--space-8); }
+.groupHead  { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-1); padding: 0 var(--space-1); }
+.groupTitle { font-size: var(--text-xs); font-weight: var(--weight-bold); color: var(--gc); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
+.groupLine  { flex: 1; height: 1px; background: color-mix(in srgb, var(--gc) 15%, transparent); }
+.groupCount { font-family: var(--mono); font-size: var(--text-2xs); color: var(--text-3); }
+.rowsCard   { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+
+/* ── Legend ────────────────────────────────────────────────── */
+.legend      { display: flex; gap: var(--space-5); flex-wrap: wrap; padding: var(--space-1) 0; }
+.legendItem  { display: flex; align-items: center; gap: 7px; }
+.legendDot   { width: 8px; height: 8px; border-radius: 50%; background: var(--lc); }
+.legendLabel { font-size: var(--text-sm); color: var(--text-2); }
+.legendCount { font-family: var(--mono); font-size: var(--text-xs); color: var(--text-3); }
+
+/* ── Detail panel ──────────────────────────────────────────── */
+.panelHead    { padding: 22px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.panelHeadTop { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-3); }
+.panelRef     {
+  font-family: var(--mono); font-size: var(--text-2xs); font-weight: var(--weight-bold);
+  color: var(--pc, var(--accent)); background: color-mix(in srgb, var(--pc, var(--accent)) 9%, transparent);
+  padding: 3px 10px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.05em;
+  border: 1px solid color-mix(in srgb, var(--pc, var(--accent)) 15%, transparent);
+}
+.panelClose   { background: none; border: none; color: var(--text-2); font-size: var(--text-xl); cursor: pointer; line-height: 1; padding: 0 2px; transition: color 120ms; }
+.panelClose:hover { color: var(--text); }
+.panelTitle   { font-size: var(--text-md); font-weight: var(--weight-bold); color: var(--text); line-height: 1.5; margin-bottom: var(--space-2); }
+.panelStatus  { display: flex; align-items: center; gap: var(--space-2); }
+.panelStatusDot   { width: 8px; height: 8px; border-radius: 50%; background: var(--sc); }
+.panelStatusLabel { font-size: var(--text-sm); color: var(--sc); font-weight: var(--weight-semibold); }
+.panelBody    { padding: 20px 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: var(--space-6); }
+.plainEnglish { font-size: var(--text-base); color: var(--text-2); line-height: 1.85; }
+.statusBtns   { display: flex; flex-direction: column; gap: 5px; }
+.statusBtn    {
+  display: flex; align-items: center; gap: var(--space-3); padding: 10px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: transparent; color: var(--text-2);
+  font-size: var(--text-base); cursor: pointer; transition: all 150ms; text-align: left;
+}
+.statusBtn[data-active="true"] {
+  border-color: color-mix(in srgb, var(--sbc) 45%, transparent);
+  background: color-mix(in srgb, var(--sbc) 6%, transparent);
+  color: var(--sbc); font-weight: var(--weight-semibold);
+}
+.statusBtnDot { width: 8px; height: 8px; border-radius: 50%; background: var(--sbc); flex-shrink: 0; }
+.notesArea    { resize: vertical; font-size: var(--text-base); line-height: 1.75; }
+.saveNotes    { margin-top: var(--space-3); width: 100%; justify-content: center; padding: 10px; }
+
+/* ── "Select a product" landing ────────────────────────────── */
+.landing      { padding: var(--space-10); max-width: 640px; margin: 0 auto; }
+.landingTitle { font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--text); letter-spacing: -0.03em; margin-bottom: var(--space-8); }
+.productBtn   {
+  display: flex; justify-content: space-between; align-items: center; width: 100%;
+  padding: 18px 22px; margin-bottom: var(--space-2);
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  cursor: pointer; text-align: left; transition: border-color 150ms;
+}
+.productBtn:hover { border-color: var(--accent); }
+.productName    { font-size: var(--text-md); font-weight: var(--weight-semibold); color: var(--text); }
+.productChevron { color: var(--accent); font-size: var(--text-lg); }
+.landingEmpty   { text-align: center; padding: var(--space-12); color: var(--text-2); }

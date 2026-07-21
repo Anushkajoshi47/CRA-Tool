@@ -1,0 +1,26 @@
+.page   { padding: var(--space-8) var(--space-10); }
+.title  { font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--text); margin: 0; }
+.filter { width: 220px; font-size: var(--text-base); }
+.loading { color: var(--text-2); font-size: var(--text-base); }
+.exportIcon { margin-right: 5px; vertical-align: -1px; }
+
+/* Local summary stat card */
+.statCard  { padding: var(--space-3) var(--space-5); }
+.statValue { font-size: 26px; font-weight: var(--weight-bold); color: var(--c, var(--text)); }
+.statLabel { font-size: var(--text-xs); color: var(--text-2); text-transform: uppercase; letter-spacing: var(--tracking-label); }
+
+/* Table cells */
+.ticketLink { font-family: var(--mono); font-size: var(--text-sm); color: var(--accent); font-weight: var(--weight-semibold); }
+.products   { font-size: var(--text-base); color: var(--text); max-width: 220px; }
+.muted      { color: var(--text-3); }
+.reporter   { font-size: var(--text-sm); color: var(--text); }
+.source     { font-size: var(--text-sm); color: var(--text-2); text-transform: capitalize; }
+.created    { font-size: var(--text-sm); color: var(--text-2); }
+
+.deadline         { font-family: var(--mono); font-size: var(--text-sm); color: var(--text-3); }
+.deadline.active  { color: var(--text-2); }
+.deadline.overdue { color: var(--red); }
+
+.empty { text-align: center; color: var(--text-3); padding: var(--space-10) 0; }
+.rowClickable { cursor: pointer; }
+.actionsCell  { white-space: nowrap; text-align: right; }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
+import s from './Auth.module.css';
 
 export default function Signup() {
   const [email, setEmail]       = useState('');
@@ -28,31 +29,27 @@ export default function Signup() {
   }
 
   return (
-    <div style={{ minHeight: 'var(--full-h)', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div className="fade-up" style={{ width: '100%', maxWidth: '400px' }}>
+    <div className={s.page}>
+      <div className={`fade-up ${s.wrap}`}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', justifyContent: 'center' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 24px rgba(0,200,200,0.3)' }}>
+        <div className={s.logoRow}>
+          <div className={s.logoBox}>
             <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
               <path d="M8 1.5L13.5 4v4.5c0 3.5-2.5 6-5.5 6.5-3-.5-5.5-3-5.5-6.5V4z" stroke="#000" strokeWidth="1.5" strokeLinejoin="round"/>
               <path d="M5.5 8.5l2 2 3.5-4" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
           <div>
-            <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>CRA Comply</div>
-            <div style={{ fontSize: '10px', color: 'var(--text-2)', fontWeight: 500, letterSpacing: '0.04em' }}>Innomotics GH180</div>
+            <div className={s.logoName}>CRA Comply</div>
+            <div className={s.logoSub}>Innomotics GH180</div>
           </div>
         </div>
 
-        <div className="card" style={{ padding: '32px' }}>
-          <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginBottom: '6px' }}>Create account</h1>
-          <p style={{ fontSize: '12.5px', color: 'var(--text-2)', marginBottom: '28px' }}>Start tracking GH180 CRA compliance.</p>
+        <div className={`card ${s.card}`}>
+          <h1 className={s.title}>Create account</h1>
+          <p className={s.subtitle}>Start tracking GH180 CRA compliance.</p>
 
-          {error && (
-            <div style={{ background: 'var(--red-dim)', border: '1px solid rgba(248,113,113,0.2)', borderLeft: '3px solid var(--red)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', color: 'var(--red)', fontSize: '12.5px', marginBottom: '20px' }}>
-              {error}
-            </div>
-          )}
+          {error && <div className={s.error}>{error}</div>}
 
           <form onSubmit={handleSubmit}>
             {[
@@ -60,28 +57,25 @@ export default function Signup() {
               { label: 'Password',      type: 'password', value: password, set: setPassword, placeholder: 'Min. 8 characters' },
               { label: 'Confirm Password', type: 'password', value: confirm, set: setConfirm, placeholder: 'Repeat password' },
             ].map((f, i) => (
-              <div key={f.label} style={{ marginBottom: i === 2 ? '22px' : '14px' }}>
+              <div key={f.label} className={i === 2 ? s.fieldLast : s.field}>
                 <label className="label">{f.label}</label>
                 <input className="input" type={f.type} value={f.value}
                   onChange={e => f.set(e.target.value)}
                   placeholder={f.placeholder} required autoFocus={f.autoFocus} />
               </div>
             ))}
-            <button type="submit" className="btn btn-primary" disabled={loading}
-              style={{ width: '100%', justifyContent: 'center', padding: '11px', fontSize: '13.5px' }}>
+            <button type="submit" className={`btn btn-primary ${s.submit}`} disabled={loading}>
               {loading ? 'Creating account...' : 'Create account'}
             </button>
           </form>
 
-          <div style={{ marginTop: '22px', paddingTop: '20px', borderTop: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-2)', textAlign: 'center' }}>
+          <div className={s.footer}>
             Already have an account?{' '}
-            <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 600 }}>Sign in</Link>
+            <Link to="/login" className={s.footerLink}>Sign in</Link>
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '11px', color: 'var(--text-3)' }}>
-          EU Cyber Resilience Act — Regulation (EU) 2024/2847
-        </div>
+        <div className={s.legal}>EU Cyber Resilience Act — Regulation (EU) 2024/2847</div>
       </div>
     </div>
   );

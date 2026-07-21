@@ -1,0 +1,22 @@
+.page     { padding: var(--space-8) var(--space-10); max-width: 860px; margin: 0 auto; }
+.title    { font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--text); margin: 0; }
+.subtitle { font-size: var(--text-sm); color: var(--text-2); margin-top: var(--space-1); }
+
+.section      { padding: var(--space-5) var(--space-6); }
+.sectionTitle { font-size: var(--text-md); font-weight: var(--weight-bold); color: var(--text); margin: 0; }
+.sectionDesc  { font-size: var(--text-sm); color: var(--text-2); margin: var(--space-1) 0 var(--space-4); line-height: 1.55; }
+
+.stageCard    { padding: var(--space-3) 14px; }
+.stageGrid    { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-3); align-items: start; }
+.stageNumLabel { display: flex; align-items: center; gap: var(--space-2); }
+.stageNum     { font-size: var(--text-2xs); color: var(--text-3); }
+.stageDefault { font-size: var(--text-2xs); color: var(--text-3); margin-top: var(--space-2); }
+.saved        { font-size: var(--text-sm); color: var(--success); margin-top: var(--space-3); }
+
+.appearanceTitle { font-size: var(--text-md); font-weight: var(--weight-bold); color: var(--text); margin: 0 0 var(--space-4); }
+.themeCard  { padding: var(--space-4); text-align: left; cursor: pointer; }
+.themeCard[data-active="true"] { border-color: var(--accent); background: var(--accent-dim); }
+.themeDot   { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--text-3); flex-shrink: 0; }
+.themeDot[data-active="true"] { border-color: var(--accent); background: var(--accent); }
+.themeLabel { font-size: var(--text-base); font-weight: var(--weight-bold); color: var(--text); }
+.themeDesc  { font-size: var(--text-xs); color: var(--text-2); line-height: 1.5; }

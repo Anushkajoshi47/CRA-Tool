@@ -1,24 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
 import { getTheme, applyTheme, ThemeMode } from '../shared/theme';
+import { Stack, Row, Grid } from '../components/primitives/layout';
+import s from './Settings.module.css';
 
 export default function Settings() {
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 760, margin: '0 auto' }}>
-      <div style={{ marginBottom: 32 }}>
-        <div className="section-label" style={{ marginBottom: 6 }}>Account</div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Settings</h1>
-        <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 6 }}>
-          Manage your profile, appearance, and product registry.
-        </p>
+    <div className={s.page}>
+      <div style={{ marginBottom: 'var(--space-8)' }}>
+        <div className="section-label" style={{ marginBottom: 'var(--space-1)' }}>Account</div>
+        <h1 className={s.title}>Settings</h1>
+        <p className={s.subtitle}>Manage your profile, appearance, and product registry.</p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <Stack gap={6}>
         <ProfileSection />
         <PasswordSection />
         <AppearanceSection />
         <ProductsSection />
-      </div>
+      </Stack>
     </div>
   );
 }
@@ -55,15 +55,15 @@ function ProfileSection() {
 
   return (
     <Section title="Profile" subtitle="Your display name is shown in the sidebar and audit trail. The organization line appears under the logo.">
-      <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <Stack as="form" gap={3} onSubmit={save}>
+        <div className={s.grid2}>
           <div>
             <label className="label">Display Name</label>
             <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Anushka Joshi" />
           </div>
           <div>
             <label className="label">Email</label>
-            <input className="input" value={email} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+            <input className={`input ${s.emailDisabled}`} value={email} disabled />
           </div>
         </div>
         <div>
@@ -76,7 +76,7 @@ function ProfileSection() {
             {saving ? 'Saving…' : 'Save Profile'}
           </button>
         </div>
-      </form>
+      </Stack>
     </Section>
   );
 }
@@ -108,8 +108,8 @@ function PasswordSection() {
 
   return (
     <Section title="Password" subtitle="Change the password you use to sign in.">
-      <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+      <Stack as="form" gap={3} onSubmit={save}>
+        <div className={s.grid3}>
           <div>
             <label className="label">Current Password</label>
             <input className="input" type="password" value={current} onChange={e => setCurrent(e.target.value)} required />
@@ -129,7 +129,7 @@ function PasswordSection() {
             {saving ? 'Saving…' : 'Change Password'}
           </button>
         </div>
-      </form>
+      </Stack>
     </Section>
   );
 }
@@ -150,30 +150,20 @@ function AppearanceSection() {
 
   return (
     <Section title="Appearance" subtitle="Applies immediately and is remembered on this browser.">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {OPTIONS.map(o => (
-          <button
-            key={o.value}
-            onClick={() => choose(o.value)}
-            className="card card-flat"
-            style={{
-              padding: '16px 18px', textAlign: 'left', cursor: 'pointer',
-              border: `1px solid ${mode === o.value ? 'var(--accent)' : 'var(--border)'}`,
-              background: mode === o.value ? 'var(--accent-dim)' : 'var(--card)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{
-                width: 14, height: 14, borderRadius: '50%',
-                border: `2px solid ${mode === o.value ? 'var(--accent)' : 'var(--text-3)'}`,
-                background: mode === o.value ? 'var(--accent)' : 'transparent',
-              }} />
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{o.label}</span>
-            </div>
-            <div style={{ fontSize: 11.5, color: 'var(--text-2)', lineHeight: 1.5 }}>{o.desc}</div>
-          </button>
-        ))}
-      </div>
+      <Grid cols={2} gap={3}>
+        {OPTIONS.map(o => {
+          const active = mode === o.value;
+          return (
+            <button key={o.value} onClick={() => choose(o.value)} className={`card card-flat ${s.themeCard}`} data-active={active}>
+              <Row gap={2} style={{ marginBottom: 'var(--space-1)' }}>
+                <span className={s.themeDot} data-active={active} />
+                <span className={s.themeLabel}>{o.label}</span>
+              </Row>
+              <div className={s.themeDesc}>{o.desc}</div>
+            </button>
+          );
+        })}
+      </Grid>
     </Section>
   );
 }
@@ -193,13 +183,13 @@ function ProductsSection() {
   return (
     <Section title="Products" subtitle="Rename products or update model and firmware details. Compliance data stays attached.">
       {loading ? (
-        <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Loading…</div>
+        <div className={s.muted}>Loading…</div>
       ) : products.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>No products registered yet.</div>
+        <div className={s.muted}>No products registered yet.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Stack gap={3}>
           {products.map(p => <ProductRow key={p._id} product={p} />)}
-        </div>
+        </Stack>
       )}
     </Section>
   );
@@ -236,8 +226,8 @@ function ProductRow({ product }: { product: any }) {
   }
 
   return (
-    <div className="card card-flat" style={{ padding: '14px 16px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1fr auto', gap: 10, alignItems: 'end' }}>
+    <div className={`card card-flat ${s.productRow}`}>
+      <div className={s.productGrid}>
         <div>
           <label className="label">Product Name</label>
           <input className="input" value={name} onChange={e => setName(e.target.value)} />
@@ -262,10 +252,10 @@ function ProductRow({ product }: { product: any }) {
 /* ── Shared bits ─────────────────────────────────────────────── */
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <section className="card card-flat" style={{ padding: '20px 24px' }}>
-      <div style={{ marginBottom: 16 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{title}</h2>
-        {subtitle && <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '4px 0 0', lineHeight: 1.5 }}>{subtitle}</p>}
+    <section className={`card card-flat ${s.section}`}>
+      <div className={s.sectionHead}>
+        <h2 className={s.sectionTitle}>{title}</h2>
+        {subtitle && <p className={s.sectionSub}>{subtitle}</p>}
       </div>
       {children}
     </section>
@@ -275,7 +265,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
 function Feedback({ message, error }: { message?: string; error?: string }) {
   if (!message && !error) return null;
   return (
-    <div style={{ fontSize: 12, marginTop: 8, color: error ? 'var(--red)' : 'var(--success)' }}>
+    <div className={`${s.feedback} ${error ? s.feedbackError : s.feedbackOk}`}>
       {error || message}
     </div>
   );

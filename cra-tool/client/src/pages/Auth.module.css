@@ -1,0 +1,21 @@
+/* Shared styles for the Login and Signup pages (same card layout). */
+.page { min-height: var(--full-h); background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-6); position: relative; }
+.wrap { width: 100%; max-width: 400px; }
+
+.logoRow  { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-10); justify-content: center; }
+.logoBox  { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 24px rgba(0,200,200,0.3); }
+.logoName { font-size: var(--text-md); font-weight: var(--weight-bold); color: var(--text); letter-spacing: -0.02em; }
+.logoSub  { font-size: var(--text-2xs); color: var(--text-2); font-weight: var(--weight-medium); letter-spacing: 0.04em; }
+
+.card     { padding: var(--space-8); }
+.title    { font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--text); letter-spacing: -0.02em; margin-bottom: var(--space-1); }
+.subtitle { font-size: var(--text-sm); color: var(--text-2); margin-bottom: var(--space-6); }
+.error    { background: var(--red-dim); border: 1px solid rgba(248,113,113,0.2); border-left: 3px solid var(--red); border-radius: var(--radius-sm); padding: var(--space-3) 14px; color: var(--red); font-size: var(--text-sm); margin-bottom: var(--space-5); }
+
+.field     { margin-bottom: var(--space-3); }
+.fieldLast { margin-bottom: var(--space-5); }
+.submit    { width: 100%; justify-content: center; padding: 11px; font-size: var(--text-base); }
+
+.footer     { margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--border); font-size: var(--text-sm); color: var(--text-2); text-align: center; }
+.footerLink { color: var(--accent); font-weight: var(--weight-semibold); }
+.legal      { text-align: center; margin-top: var(--space-5); font-size: var(--text-xs); color: var(--text-3); }

@@ -1,0 +1,53 @@
+.page    { padding: var(--space-8) var(--space-10); max-width: 860px; }
+.loading { padding: var(--space-10); color: var(--text-2); }
+
+.breadcrumb     { font-size: var(--text-sm); color: var(--text-3); margin-bottom: var(--space-4); }
+.breadcrumbLink { color: var(--text-3); }
+
+/* ── Header ────────────────────────────────────────────────── */
+.ticketNo { font-family: var(--mono); font-size: var(--text-md); color: var(--accent); font-weight: var(--weight-bold); }
+.cvssTag  { font-size: var(--text-xs); font-weight: var(--weight-bold); color: var(--c, var(--text-2)); }
+.incident { font-size: var(--text-2xs); font-weight: var(--weight-bold); color: var(--amber); text-transform: uppercase; letter-spacing: var(--tracking-label); }
+.title    { font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--text); margin-bottom: var(--space-2); line-height: 1.35; }
+.products { font-size: var(--text-base); color: var(--text-2); margin-bottom: var(--space-1); }
+.productName { color: var(--text); }
+.productVer  { color: var(--text-3); margin-left: 5px; }
+.metaRow    { font-size: var(--text-sm); color: var(--text-3); }
+.metaStrong { color: var(--text); font-weight: var(--weight-semibold); }
+.metaValue  { color: var(--text-2); }
+.actionError { color: var(--red); font-size: var(--text-sm); margin: -12px 0 var(--space-4); }
+
+/* ── Tabs ──────────────────────────────────────────────────── */
+.tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: var(--space-8); }
+.tab  {
+  padding: 9px 18px; font-size: var(--text-base); background: none; border: none; cursor: pointer;
+  font-weight: var(--weight-normal); color: var(--text-2);
+  border-bottom: 2px solid transparent; text-transform: capitalize;
+}
+.tab.tabActive { font-weight: var(--weight-semibold); color: var(--accent); border-bottom-color: var(--accent); }
+.tabCount { margin-left: 6px; font-size: var(--text-2xs); background: var(--border); border-radius: 10px; padding: 1px 6px; color: var(--text-2); }
+
+/* ── Fields (overview) ─────────────────────────────────────── */
+.fieldLabel    { font-size: var(--text-2xs); font-weight: var(--weight-bold); color: var(--text-3); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-bottom: var(--space-1); }
+.fieldValue    { font-size: var(--text-base); color: var(--text); line-height: 1.6; }
+.fieldValuePre { white-space: pre-wrap; }
+
+/* ── Communications ────────────────────────────────────────── */
+.tabEmpty { color: var(--text-3); font-size: var(--text-base); }
+.commCard { padding: var(--space-3) var(--space-4); }
+.commBadge {
+  font-size: var(--text-2xs); font-weight: var(--weight-bold); text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--c); background: color-mix(in srgb, var(--c) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 27%, transparent);
+  border-radius: 20px; padding: 3px 9px; white-space: nowrap; flex-shrink: 0;
+}
+.commMsg  { font-size: var(--text-base); color: var(--text); margin: 0; line-height: 1.55; }
+.commTime { font-size: var(--text-xs); color: var(--text-3); margin-top: var(--space-1); }
+
+/* ── Reports ───────────────────────────────────────────────── */
+.repNote    { font-size: var(--text-base); color: var(--text-3); margin-bottom: var(--space-5); }
+.repCard    { padding: var(--space-4) var(--space-5); }
+.repType    { font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--text); text-transform: uppercase; letter-spacing: 0.06em; }
+.repDue     { margin-left: auto; font-size: var(--text-xs); color: var(--text-3); }
+.repContent { font-size: var(--text-base); color: var(--text-2); margin: 0; white-space: pre-wrap; line-height: 1.6; }
+.repSubmitted { font-size: var(--text-xs); color: var(--text-3); margin-left: auto; }

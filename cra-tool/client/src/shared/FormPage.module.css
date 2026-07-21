@@ -1,0 +1,12 @@
+/* Shared styles for the create/edit form pages (Log Vulnerability, Add/Edit
+   Product). Layout via Stack/Row primitives; this holds the page chrome. */
+.page     { padding: var(--space-8) var(--space-10); max-width: 720px; }
+.title    { font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--text); margin: 0; }
+.subtitle { font-size: var(--text-base); color: var(--text-2); margin-top: var(--space-1); line-height: 1.6; }
+.hint     { font-size: var(--text-xs); color: var(--text-3); margin-top: var(--space-2); line-height: 1.5; }
+.error    { color: var(--red); font-size: var(--text-base); }
+.errorBox { background: var(--red-dim); border: 1px solid rgba(248,113,113,0.2); border-left: 3px solid var(--red); border-radius: var(--radius-sm); padding: var(--space-3) 14px; color: var(--red); font-size: var(--text-sm); margin-bottom: var(--space-5); }
+
+/* Repeatable product-input row */
+.productNameCol { flex: 2; }
+.productVerCol  { flex: 1; }

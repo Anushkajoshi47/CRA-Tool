@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { Stack, Row, Grid } from '../components/primitives/layout';
+import fp from '../shared/FormPage.module.css';
+import s from './ProductForm.module.css';
 
 const PRODUCTS = [
   { id: 'gh150',    label: 'Innomotics Perfect Harmony GH150', prefix: 'GH150',   range: 'Medium Voltage Drive', network: true, remote: true  },
@@ -21,14 +24,13 @@ function classify(hasNetwork, hasRemote) {
 
 function Toggle({ label, hint, value, onChange }: any) {
   return (
-    <label style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', cursor: 'pointer', paddingBottom: '16px', borderBottom: '1px solid var(--border)' }}>
+    <label className={s.toggle}>
       <div>
-        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '2px' }}>{label}</div>
-        {hint && <div style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.5, maxWidth: '320px' }}>{hint}</div>}
+        <div className={s.toggleLabel}>{label}</div>
+        {hint && <div className={s.toggleHint}>{hint}</div>}
       </div>
-      <div onClick={() => onChange(!value)}
-        style={{ width: '42px', height: '24px', borderRadius: '12px', background: value ? 'var(--accent)' : 'rgba(255,255,255,0.08)', border: `1px solid ${value ? 'var(--accent)' : 'var(--border)'}`, position: 'relative', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0, boxShadow: value ? '0 0 12px rgba(0,200,200,0.25)' : 'none' }}>
-        <div style={{ position: 'absolute', top: '3px', left: value ? '20px' : '3px', width: '16px', height: '16px', borderRadius: '50%', background: value ? '#000' : 'rgba(255,255,255,0.3)', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+      <div className={s.switch} data-on={!!value} onClick={() => onChange(!value)}>
+        <div className={s.knob} />
       </div>
     </label>
   );
@@ -36,9 +38,9 @@ function Toggle({ label, hint, value, onChange }: any) {
 
 function FormField({ label, hint, children }: any) {
   return (
-    <div style={{ marginBottom: '18px' }}>
-      <label className="label" style={{ display: 'block', marginBottom: '6px' }}>{label}</label>
-      {hint && <div style={{ fontSize: '10.5px', color: 'var(--text-3)', marginBottom: '8px', lineHeight: 1.5 }}>{hint}</div>}
+    <div className={s.field}>
+      <label className="label" style={{ display: 'block', marginBottom: 'var(--space-1)' }}>{label}</label>
+      {hint && <div className={s.fieldHint}>{hint}</div>}
       {children}
     </div>
   );
@@ -85,39 +87,34 @@ export default function ProductForm() {
   }
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: '680px', margin: '0 auto' }}>
+    <div className={fp.page} style={{ maxWidth: 680, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <button className="btn btn-ghost btn-sm" style={{ padding: '3px 8px', fontSize: '11px', marginBottom: '10px' }} onClick={() => navigate('/products')}>← Products</button>
-        <div className="section-label" style={{ marginBottom: '4px' }}>Product Registry</div>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em' }}>Add Product</h1>
-        <p style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '4px' }}>Select an Innomotics Medium Voltage Drive. CRA compliance checklist is created automatically.</p>
+      <div style={{ marginBottom: 'var(--space-8)' }}>
+        <button className="btn btn-ghost btn-sm" style={{ padding: '3px 8px', fontSize: 'var(--text-xs)', marginBottom: 'var(--space-3)' }} onClick={() => navigate('/products')}>← Products</button>
+        <div className="section-label" style={{ marginBottom: 'var(--space-1)' }}>Product Registry</div>
+        <h1 className={s.title}>Add Product</h1>
+        <p className={s.subtitle}>Select an Innomotics Medium Voltage Drive. CRA compliance checklist is created automatically.</p>
       </div>
 
-      {error && (
-        <div style={{ background: 'var(--red-dim)', border: '1px solid rgba(248,113,113,0.2)', borderLeft: '3px solid var(--red)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', color: 'var(--red)', fontSize: '12.5px', marginBottom: '20px' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className={fp.errorBox}>{error}</div>}
 
       <form onSubmit={handleSubmit}>
         {/* Product selector */}
-        <div className="card" style={{ padding: '24px', marginBottom: '16px' }}>
+        <div className={`card ${s.card}`}>
           <FormField label="Innomotics Product" hint="Select the Medium Voltage Drive you are registering for CRA compliance.">
-            <select className="input" value={selected?.id || ''} onChange={e => pickProduct(e.target.value)}
-              style={{ appearance: 'none', background: '#0e0e1a', color: '#e8e8f0', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23646480' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '32px' }}>
-              <option value="" style={{ background: '#0e0e1a', color: '#646480' }}>— Select a product —</option>
-              {PRODUCTS.map(p => <option key={p.id} value={p.id} style={{ background: '#0e0e1a', color: '#e8e8f0' }}>{p.label}</option>)}
+            <select className={`input ${s.select}`} value={selected?.id || ''} onChange={e => pickProduct(e.target.value)}>
+              <option value="">— Select a product —</option>
+              {PRODUCTS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
           </FormField>
 
           {/* Product info chip row */}
           {selected && (
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '-4px' }}>
-              <span className="mono" style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-3)' }}>{selected.prefix}</span>
-              <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>{selected.range}</span>
-              {selected.network && <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(0,200,200,0.1)', border: '1px solid rgba(0,200,200,0.2)', color: '#00c8c8' }}>NET</span>}
-              {selected.remote  && <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', color: 'var(--amber)' }}>REMOTE</span>}
+            <div className={s.chipRow}>
+              <span className={`mono ${s.chipModel}`}>{selected.prefix}</span>
+              <span className={s.chipRange}>{selected.range}</span>
+              {selected.network && <span className={s.chipNet}>NET</span>}
+              {selected.remote  && <span className={s.chipRemote}>REMOTE</span>}
             </div>
           )}
         </div>
@@ -125,13 +122,13 @@ export default function ProductForm() {
         {/* Identity — only shown after product picked */}
         {selected && (
           <>
-            <div className="card" style={{ padding: '24px', marginBottom: '16px' }}>
-              <div className="section-label" style={{ marginBottom: '18px' }}>Product Details</div>
+            <div className={`card ${s.card}`}>
+              <div className="section-label" style={{ marginBottom: 18 }}>Product Details</div>
               <FormField label="Product Name" hint="Add a variant or application label if needed.">
                 <input className="input" value={form.name} onChange={e => set('name')(e.target.value)}
                   placeholder={selected.label} required autoFocus />
               </FormField>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <Grid cols={2} gap={3}>
                 <FormField label="Model Number">
                   <input className="input mono" value={form.modelNumber} onChange={e => set('modelNumber')(e.target.value)}
                     placeholder={`e.g. ${selected.prefix}-XXX`} />
@@ -140,19 +137,19 @@ export default function ProductForm() {
                   <input className="input mono" value={form.firmwareVersion} onChange={e => set('firmwareVersion')(e.target.value)}
                     placeholder="e.g. v3.14.2" />
                 </FormField>
-              </div>
+              </Grid>
               <FormField label="Support Period (years)" hint="Security update commitment under CRA Article 13(8).">
-                <input className="input" type="number" min="1" max="30" value={form.supportPeriodYears}
-                  onChange={e => set('supportPeriodYears')(e.target.value)} placeholder="e.g. 10" style={{ maxWidth: '160px' }} />
+                <input className={`input ${s.supportInput}`} type="number" min="1" max="30" value={form.supportPeriodYears}
+                  onChange={e => set('supportPeriodYears')(e.target.value)} placeholder="e.g. 10" />
               </FormField>
             </div>
 
-            <div className="card" style={{ padding: '24px', marginBottom: '16px' }}>
-              <div className="section-label" style={{ marginBottom: '4px' }}>Connectivity &amp; Market</div>
-              <div style={{ fontSize: '10.5px', color: 'var(--text-3)', marginBottom: '18px' }}>
+            <div className={`card ${s.card}`}>
+              <div className="section-label" style={{ marginBottom: 'var(--space-1)' }}>Connectivity &amp; Market</div>
+              <div className={s.connNote}>
                 Pre-filled for <strong style={{ color: 'var(--text-2)' }}>{selected.label.split('—')[0].trim()}</strong> — override if your variant differs.
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <Stack gap={4}>
                 <Toggle label="Has Network Interface"
                   hint="Connects to an industrial network (PROFINET, EtherNet/IP, Modbus TCP, etc.)"
                   value={form.hasNetworkInterface} onChange={set('hasNetworkInterface')} />
@@ -162,25 +159,23 @@ export default function ProductForm() {
                 <Toggle label="Sold in the EU"
                   hint="Product is placed on the European market. CRA applies directly."
                   value={form.soldInEU} onChange={set('soldInEU')} />
-              </div>
+              </Stack>
             </div>
 
-            <div className="card" style={{ padding: '20px 24px', marginBottom: '24px', borderLeft: `3px solid ${classification.color}`, background: classification.dim }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>CRA Classification</span>
-                <span className="mono" style={{ fontSize: '11px', fontWeight: 700, color: classification.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{classification.cls}</span>
+            <div className={`card ${s.classCard}`} style={{ ['--cc' as any]: classification.color, ['--ccdim' as any]: classification.dim }}>
+              <div className={s.classHead}>
+                <span className={s.classLabel}>CRA Classification</span>
+                <span className={`mono ${s.classValue}`}>{classification.cls}</span>
               </div>
-              <p style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.65 }}>{classification.reason}</p>
+              <p className={s.classReason}>{classification.reason}</p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="submit" className="btn btn-primary" disabled={saving}
-                style={{ flex: 1, justifyContent: 'center', padding: '11px', fontSize: '13.5px' }}>
+            <Row gap={2}>
+              <button type="submit" className={`btn btn-primary ${s.submit}`} disabled={saving}>
                 {saving ? 'Creating…' : 'Create Product'}
               </button>
-              <button type="button" className="btn btn-ghost" style={{ padding: '11px 20px' }}
-                onClick={() => navigate('/products')}>Cancel</button>
-            </div>
+              <button type="button" className="btn btn-ghost" style={{ padding: '11px 20px' }} onClick={() => navigate('/products')}>Cancel</button>
+            </Row>
           </>
         )}
       </form>

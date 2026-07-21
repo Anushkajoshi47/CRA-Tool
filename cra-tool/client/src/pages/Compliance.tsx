@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import rs from './Compliance.module.css';
 
 /* ─── Constants ──────────────────────────────────────────────── */
 const PILLAR_COLOR = {
@@ -107,7 +108,6 @@ function ScoreRing({ score }) {
 
 /* ─── Single requirement row ─────────────────────────────────── */
 function RequirementRow({ item, index, onOpenPanel, onStatusCycle }) {
-  const [hovered, setHovered]   = useState(false);
   const [spinning, setSpinning] = useState(false);
   const pillarColor = PILLAR_COLOR[item.pillar] || '#6e6e8a';
   const statusCfg   = STATUS_CFG[item.status] || STATUS_CFG.not_started;
@@ -119,101 +119,24 @@ function RequirementRow({ item, index, onOpenPanel, onStatusCycle }) {
   }
 
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '14px',
-        padding: '0 20px', height: '58px',
-        background: hovered ? 'rgba(255,255,255,0.022)' : 'transparent',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
-        transition: 'background 120ms',
-        position: 'relative',
-      }}
-    >
-      {/* Pillar accent bar — far left */}
-      <div style={{
-        position: 'absolute', left: 0, top: '12px', bottom: '12px',
-        width: '3px', borderRadius: '0 2px 2px 0',
-        background: pillarColor,
-        opacity: hovered ? 1 : 0.35,
-        transition: 'opacity 150ms',
-      }} />
+    <div className={rs.row} style={{ ['--pc' as any]: pillarColor, ['--sc' as any]: statusCfg.color }}>
+      <div className={rs.accent} />
 
       {/* Clickable status icon */}
       <StatusIcon status={item.status} onClick={handleCycle} spinning={spinning} />
 
-      {/* Index */}
-      <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--text-3)',
-        width: '22px', textAlign: 'right', flexShrink: 0, userSelect: 'none' }}>
-        {String(index + 1).padStart(2, '0')}
-      </span>
+      <span className={rs.index}>{String(index + 1).padStart(2, '0')}</span>
 
-      {/* Article ref */}
-      <span style={{
-        fontFamily: 'var(--mono)', fontSize: '9.5px', fontWeight: 700,
-        color: pillarColor, background: pillarColor + '14',
-        padding: '2px 9px', borderRadius: '4px', flexShrink: 0,
-        letterSpacing: '0.05em', textTransform: 'uppercase',
-        border: `1px solid ${pillarColor}22`,
-        transition: 'background 150ms',
-        ...(hovered ? { background: pillarColor + '24' } : {}),
-      }}>
-        {item.articleRef}
-      </span>
+      <span className={rs.articleRef}>{item.articleRef}</span>
 
-      {/* Title — main content */}
-      <span
-        onClick={() => onOpenPanel(item)}
-        style={{
-          flex: 1, fontSize: '14px', fontWeight: 500, color: 'var(--text)',
-          lineHeight: 1.35, cursor: 'pointer',
-          transition: 'color 120ms',
-          ...(hovered ? { color: '#fff' } : {}),
-        }}
-      >
-        {item.title}
-      </span>
+      <span className={rs.title} onClick={() => onOpenPanel(item)}>{item.title}</span>
 
-      {/* Right-side: chips + status label (visible on hover) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-        {item.evidenceRequired?.length > 0 && (
-          <span style={{
-            fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--text-3)',
-            border: '1px solid var(--border)', padding: '2px 7px', borderRadius: '4px',
-            letterSpacing: '0.07em', userSelect: 'none',
-          }}>EVIDENCE</span>
-        )}
-        {item.urgent && (
-          <span style={{
-            fontFamily: 'var(--mono)', fontSize: '9px', fontWeight: 700,
-            color: 'var(--warning)', background: 'var(--warning-dim)',
-            border: '1px solid rgba(249,115,22,0.25)',
-            padding: '2px 7px', borderRadius: '4px', letterSpacing: '0.07em',
-          }}>URGENT</span>
-        )}
-
-        {/* Status label — slides in on hover */}
-        <span style={{
-          fontFamily: 'var(--mono)', fontSize: '10px', fontWeight: 600,
-          color: statusCfg.color,
-          opacity: hovered ? 1 : 0,
-          transform: hovered ? 'translateX(0)' : 'translateX(6px)',
-          transition: 'opacity 150ms, transform 150ms',
-          minWidth: '80px', textAlign: 'right',
-          userSelect: 'none',
-        }}>
-          {statusCfg.label}
-        </span>
-
-        {/* Open details arrow */}
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
+      <div className={rs.rightGroup}>
+        {item.evidenceRequired?.length > 0 && <span className={rs.chipEvidence}>EVIDENCE</span>}
+        {item.urgent && <span className={rs.chipUrgent}>URGENT</span>}
+        <span className={rs.statusLabel}>{statusCfg.label}</span>
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className={rs.arrow}
           onClick={() => onOpenPanel(item)}
-          style={{
-            cursor: 'pointer', flexShrink: 0,
-            stroke: hovered ? 'var(--text-2)' : 'transparent',
-            transition: 'stroke 150ms',
-          }}
           strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5.5 3l4.5 4.5-4.5 4.5" />
         </svg>
@@ -328,25 +251,17 @@ export default function Compliance() {
   /* ── No product selected ── */
   if (!productId) {
     return (
-      <div style={{ padding: '40px', maxWidth: '640px', margin: '0 auto' }}>
-        <div className="section-label" style={{ marginBottom: '8px' }}>Compliance Tracker</div>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)',
-          letterSpacing: '-0.03em', marginBottom: '28px' }}>Select a product</h1>
+      <div className={rs.landing}>
+        <div className="section-label" style={{ marginBottom: 'var(--space-2)' }}>Compliance Tracker</div>
+        <h1 className={rs.landingTitle}>Select a product</h1>
         {products.map(p => (
-          <button key={p._id} onClick={() => navigate(`/compliance/${p._id}`)}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              width: '100%', padding: '18px 22px', marginBottom: '8px',
-              background: 'var(--card)', border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)', cursor: 'pointer', textAlign: 'left',
-              transition: 'border-color 150ms' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-            <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)' }}>{p.name}</span>
-            <span style={{ color: 'var(--accent)', fontSize: '18px' }}>›</span>
+          <button key={p._id} onClick={() => navigate(`/compliance/${p._id}`)} className={rs.productBtn}>
+            <span className={rs.productName}>{p.name}</span>
+            <span className={rs.productChevron}>›</span>
           </button>
         ))}
         {!loading && products.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-2)' }}>
+          <div className={rs.landingEmpty}>
             No products registered yet.
             <br /><br />
             <button className="btn btn-primary btn-sm" onClick={() => navigate('/product/new')}>Add Product</button>
@@ -371,33 +286,27 @@ export default function Compliance() {
     ? PILLARS.map(p => ({ pillar: p, rows: items.filter(i => i.pillar === p) })).filter(g => g.rows.length)
     : [{ pillar, rows: filtered }];
 
+  const scoreHex = score >= 70 ? '#00e676' : score >= 30 ? '#f59e0b' : '#f87171';
+
   return (
-    <div style={{ padding: '32px 40px', maxWidth: '1060px', margin: '0 auto' }}>
+    <div className={rs.page}>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+      <div className={rs.header}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-            <button className="btn btn-ghost btn-sm" style={{ fontSize: '12px', padding: '3px 10px' }}
+          <div className={rs.crumbRow}>
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: 'var(--text-sm)', padding: '3px 10px' }}
               onClick={() => navigate('/compliance')}>← All</button>
-            <span style={{ color: 'var(--border-hi)' }}>/</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>{product?.name}</span>
+            <span className={rs.crumbSep}>/</span>
+            <span className={rs.crumbName}>{product?.name}</span>
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text)',
-            letterSpacing: '-0.04em', marginBottom: '6px' }}>{product?.name}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '13px', color: 'var(--text-2)' }}>
-              <span style={{ color: '#00e676', fontWeight: 700 }}>{done}</span> of {items.length} completed
+          <h1 className={rs.pageTitle}>{product?.name}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+            <span className={rs.progressText}>
+              <span className={rs.progressDone}>{done}</span> of {items.length} completed
             </span>
-            {/* Mini progress bar */}
-            <div style={{ width: '120px', height: '4px', background: 'rgba(255,255,255,0.06)',
-              borderRadius: '99px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${score}%`, borderRadius: '99px',
-                background: score >= 70 ? '#00e676' : score >= 30 ? '#f59e0b' : '#f87171',
-                transition: 'width 1s cubic-bezier(0.16,1,0.3,1)',
-                boxShadow: `0 0 8px ${score >= 70 ? '#00e676' : score >= 30 ? '#f59e0b' : '#f87171'}66`,
-              }} />
+            <div className={rs.miniBar}>
+              <div className={rs.miniBarFill} style={{ width: `${score}%`, background: scoreHex, boxShadow: `0 0 8px ${scoreHex}66` }} />
             </div>
           </div>
         </div>
@@ -405,39 +314,25 @@ export default function Compliance() {
       </div>
 
       {/* ── Pillar filter tabs ── */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', flexWrap: 'wrap' }}>
+      <div className={rs.pillarTabs}>
         {allPillars.map(p => {
           const col     = PILLAR_COLOR[p];
           const active  = pillar === p;
           const cnt     = p === 'All' ? items.length : items.filter(i => i.pillar === p).length;
           const doneCnt = p === 'All' ? done : items.filter(i => i.pillar === p && i.status === 'done').length;
           return (
-            <button key={p} onClick={() => setPillar(p)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '7px',
-                padding: '6px 14px', borderRadius: '8px', cursor: 'pointer',
-                fontSize: '12px', fontWeight: active ? 700 : 500,
-                background: active ? (col ? col + '15' : 'rgba(0,200,200,0.1)') : 'transparent',
-                color: active ? (col || 'var(--accent)') : 'var(--text-2)',
-                border: `1px solid ${active ? (col || 'var(--accent)') + '40' : 'var(--border)'}`,
-                transition: 'all 150ms',
-              }}>
-              {/* Mini pillar dot */}
-              {col && <div style={{ width: '6px', height: '6px', borderRadius: '50%',
-                background: col, opacity: active ? 1 : 0.4 }} />}
+            <button key={p} onClick={() => setPillar(p)} className={rs.pillarTab} data-active={active}
+              style={{ ['--pc' as any]: col || 'var(--accent)' }}>
+              {col && <div className={rs.pillarDot} />}
               {p === 'All' ? 'All' : p.split(' ')[0]}
-              <span style={{ fontFamily: 'var(--mono)', fontSize: '10px',
-                opacity: 0.65, letterSpacing: '0.03em' }}>
-                {doneCnt}/{cnt}
-              </span>
+              <span className={rs.pillarCount}>{doneCnt}/{cnt}</span>
             </button>
           );
         })}
       </div>
 
       {/* ── Hint ── */}
-      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '12px',
-        display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div className={rs.hint}>
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor"
           strokeWidth="1.4" strokeLinecap="round"><circle cx="6" cy="6" r="5"/><path d="M6 5.5v3M6 4h.01"/></svg>
         Click the status icon to cycle status · Click the row title to open details
@@ -451,10 +346,9 @@ export default function Compliance() {
         const circ      = 2 * Math.PI * 9;
 
         return (
-          <div key={grpPillar} style={{ marginBottom: '28px' }}>
+          <div key={grpPillar} className={rs.group} style={{ ['--gc' as any]: col }}>
             {pillar === 'All' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px',
-                marginBottom: '4px', padding: '0 4px' }}>
+              <div className={rs.groupHead}>
                 {/* Tiny pillar ring */}
                 <svg width="24" height="24" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
                   <circle cx="12" cy="12" r="9" fill="none"
@@ -465,20 +359,14 @@ export default function Compliance() {
                     style={{ transform: 'rotate(-90deg)', transformOrigin: '12px 12px',
                       filter: `drop-shadow(0 0 4px ${col}55)` }} />
                 </svg>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: col,
-                  textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  {grpPillar}
-                </span>
-                <div style={{ flex: 1, height: '1px', background: col + '25' }} />
-                <span style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--text-3)' }}>
-                  {grpDone}/{rows.length}
-                </span>
+                <span className={rs.groupTitle}>{grpPillar}</span>
+                <div className={rs.groupLine} />
+                <span className={rs.groupCount}>{grpDone}/{rows.length}</span>
               </div>
             )}
 
             {/* Rows container */}
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+            <div className={rs.rowsCard}>
               {rows.map((item, idx) => (
                 <RequirementRow
                   key={item.itemId || item.reqId || idx}
@@ -496,18 +384,14 @@ export default function Compliance() {
       })}
 
       {/* ── Status legend ── */}
-      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', padding: '4px 0' }}>
+      <div className={rs.legend}>
         {Object.entries(STATUS_CFG).map(([key, cfg]) => {
           const cnt = items.filter(i => i.status === key).length;
           return (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%',
-                background: cfg.color,
-                boxShadow: key !== 'not_started' ? cfg.glow : 'none' }} />
-              <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>{cfg.label}</span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--text-3)' }}>
-                {cnt}
-              </span>
+            <div key={key} className={rs.legendItem}>
+              <div className={rs.legendDot} style={{ ['--lc' as any]: cfg.color, boxShadow: key !== 'not_started' ? cfg.glow : 'none' }} />
+              <span className={rs.legendLabel}>{cfg.label}</span>
+              <span className={rs.legendCount}>{cnt}</span>
             </div>
           );
         })}
@@ -519,75 +403,36 @@ export default function Compliance() {
           <div className="panel-overlay" onClick={() => setPanel(null)} />
           <aside className="detail-panel">
             {/* Panel header */}
-            <div style={{ padding: '22px 24px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between',
-                alignItems: 'flex-start', marginBottom: '14px' }}>
-                <span style={{
-                  fontFamily: 'var(--mono)', fontSize: '10px', fontWeight: 700,
-                  color: PILLAR_COLOR[panel.pillar] || 'var(--accent)',
-                  background: (PILLAR_COLOR[panel.pillar] || '#00c8c8') + '18',
-                  padding: '3px 10px', borderRadius: '5px',
-                  textTransform: 'uppercase', letterSpacing: '0.05em',
-                  border: `1px solid ${(PILLAR_COLOR[panel.pillar] || '#00c8c8')}25`,
-                }}>
-                  {panel.articleRef}
-                </span>
-                <button onClick={() => setPanel(null)}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-2)',
-                    fontSize: '20px', cursor: 'pointer', lineHeight: 1,
-                    padding: '0 2px', transition: 'color 120ms' }}
-                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}>
-                  ×
-                </button>
+            <div className={rs.panelHead} style={{ ['--pc' as any]: PILLAR_COLOR[panel.pillar] || 'var(--accent)', ['--sc' as any]: STATUS_CFG[panel.status]?.color || '#6e6e8a' }}>
+              <div className={rs.panelHeadTop}>
+                <span className={rs.panelRef}>{panel.articleRef}</span>
+                <button onClick={() => setPanel(null)} className={rs.panelClose}>×</button>
               </div>
-              <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)',
-                lineHeight: 1.5, marginBottom: '8px' }}>
-                {panel.title}
-              </h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%',
-                  background: STATUS_CFG[panel.status]?.color || '#6e6e8a',
-                  boxShadow: STATUS_CFG[panel.status]?.glow }} />
-                <span style={{ fontSize: '12px', color: STATUS_CFG[panel.status]?.color || '#6e6e8a',
-                  fontWeight: 600 }}>
-                  {STATUS_CFG[panel.status]?.label}
-                </span>
+              <h2 className={rs.panelTitle}>{panel.title}</h2>
+              <div className={rs.panelStatus}>
+                <div className={rs.panelStatusDot} style={{ boxShadow: STATUS_CFG[panel.status]?.glow }} />
+                <span className={rs.panelStatusLabel}>{STATUS_CFG[panel.status]?.label}</span>
               </div>
             </div>
 
-            <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1,
-              display: 'flex', flexDirection: 'column', gap: '22px' }}>
-
+            <div className={rs.panelBody}>
               {panel.plainEnglish && (
                 <div>
-                  <div className="section-label" style={{ marginBottom: '10px' }}>Plain English</div>
-                  <p style={{ fontSize: '13.5px', color: 'var(--text-2)', lineHeight: 1.85 }}>
-                    {panel.plainEnglish}
-                  </p>
+                  <div className="section-label" style={{ marginBottom: 'var(--space-2)' }}>Plain English</div>
+                  <p className={rs.plainEnglish}>{panel.plainEnglish}</p>
                 </div>
               )}
 
               {/* Status buttons */}
               <div>
-                <div className="section-label" style={{ marginBottom: '10px' }}>Set Status</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <div className="section-label" style={{ marginBottom: 'var(--space-2)' }}>Set Status</div>
+                <div className={rs.statusBtns}>
                   {Object.entries(STATUS_CFG).map(([key, cfg]) => {
                     const active = panel.status === key;
                     return (
-                      <button key={key} onClick={() => savePanel(key)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '10px',
-                          padding: '10px 14px', borderRadius: 'var(--radius-sm)',
-                          border: `1px solid ${active ? cfg.color + '45' : 'var(--border)'}`,
-                          background: active ? cfg.color + '10' : 'transparent',
-                          color: active ? cfg.color : 'var(--text-2)',
-                          fontSize: '13px', fontWeight: active ? 600 : 400,
-                          cursor: 'pointer', transition: 'all 150ms', textAlign: 'left',
-                        }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%',
-                          background: cfg.color, flexShrink: 0,
-                          boxShadow: active ? cfg.glow : 'none' }} />
+                      <button key={key} onClick={() => savePanel(key)} className={rs.statusBtn} data-active={active}
+                        style={{ ['--sbc' as any]: cfg.color }}>
+                        <div className={rs.statusBtnDot} style={{ boxShadow: active ? cfg.glow : 'none' }} />
                         {cfg.label}
                         {active && (
                           <svg style={{ marginLeft: 'auto' }} width="13" height="13" viewBox="0 0 14 14"
@@ -603,15 +448,11 @@ export default function Compliance() {
 
               {/* Notes */}
               <div>
-                <div className="section-label" style={{ marginBottom: '10px' }}>Notes / Evidence</div>
-                <textarea className="input" rows={5}
-                  style={{ resize: 'vertical', fontSize: '13px', lineHeight: 1.75 }}
+                <div className="section-label" style={{ marginBottom: 'var(--space-2)' }}>Notes / Evidence</div>
+                <textarea className={`input ${rs.notesArea}`} rows={5}
                   value={notes} onChange={e => setNotes(e.target.value)}
                   placeholder="Paste evidence references, links, or notes…" />
-                <button className="btn btn-primary" disabled={saving}
-                  style={{ marginTop: '10px', width: '100%',
-                    justifyContent: 'center', padding: '10px' }}
-                  onClick={() => savePanel()}>
+                <button className={`btn btn-primary ${rs.saveNotes}`} disabled={saving} onClick={() => savePanel()}>
                   {saving ? 'Saving…' : 'Save Notes'}
                 </button>
               </div>

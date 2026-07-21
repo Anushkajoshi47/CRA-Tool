@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import ConfirmDialog from '../shared/ConfirmDialog';
+import { Row, Grid, Stack } from '../components/primitives/layout';
+import s from './Products.module.css';
+
+const CRA_CLASS_COLOR: Record<string, string> = { Important: 'var(--amber)', Critical: 'var(--red)' };
 
 function scoreHex(pct) {
   if (pct >= 70) return '#00e676';
@@ -52,52 +56,50 @@ export default function Products() {
   }
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: '1100px', margin: '0 auto' }}>
+    <div className={s.page}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '12px' }}>
+      <Row justify="between" align="center" gap={3} style={{ marginBottom: 'var(--space-8)' }}>
         <div>
-          <div style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Product Registry</div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em' }}>Products</h1>
-          <p style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '4px' }}>Manage GH180 product variants and their individual CRA compliance progress.</p>
+          <div className={s.eyebrow}>Product Registry</div>
+          <h1 className={s.title}>Products</h1>
+          <p className={s.subtitle}>Manage GH180 product variants and their individual CRA compliance progress.</p>
         </div>
         <button className="btn btn-primary btn-sm" onClick={() => navigate('/product/new')}>+ Add Product</button>
-      </div>
+      </Row>
 
       {/* Summary strip */}
       {!loading && products.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '24px' }}>
+        <Grid cols={4} gap={2} style={{ marginBottom: 'var(--space-6)' }}>
           {[
-            { label: 'Total Products',  value: products.length,                                      color: 'var(--accent)' },
-            { label: 'Network-Enabled', value: products.filter(p => p.hasNetworkInterface).length,   color: 'var(--text-2)' },
-            { label: 'Remote Access',   value: products.filter(p => p.hasRemoteAccess).length,       color: 'var(--warning)' },
-            { label: 'Sold in EU',      value: products.filter(p => p.soldInEU).length,              color: 'var(--success)' },
-          ].map(s => (
-            <div key={s.label} className="card card-flat" style={{ padding: '18px 20px' }}>
-              <div className="mono" style={{ fontSize: '26px', fontWeight: 700, color: s.color, lineHeight: 1, marginBottom: '6px' }}>{s.value}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 500 }}>{s.label}</div>
+            { label: 'Total Products',  value: products.length,                                    color: 'var(--accent)' },
+            { label: 'Network-Enabled', value: products.filter(p => p.hasNetworkInterface).length, color: 'var(--text-2)' },
+            { label: 'Remote Access',   value: products.filter(p => p.hasRemoteAccess).length,     color: 'var(--warning)' },
+            { label: 'Sold in EU',      value: products.filter(p => p.soldInEU).length,            color: 'var(--success)' },
+          ].map(stat => (
+            <div key={stat.label} className={`card card-flat ${s.statCard}`} style={{ ['--c' as any]: stat.color }}>
+              <div className={`mono ${s.statValue}`}>{stat.value}</div>
+              <div className={s.statLabel}>{stat.label}</div>
             </div>
           ))}
-        </div>
+        </Grid>
       )}
 
       {/* Table */}
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: '72px', borderRadius: 'var(--radius)' }} />)}
-        </div>
+        <Stack gap={2}>
+          {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 72, borderRadius: 'var(--radius)' }} />)}
+        </Stack>
       ) : products.length === 0 ? (
-        <div className="card" style={{ padding: '64px 32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '48px', height: '48px', border: '1px dashed rgba(0,200,200,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: '20px', height: '20px', background: 'rgba(0,200,200,0.1)', borderRadius: '6px' }} />
-          </div>
+        <div className={`card ${s.empty}`}>
+          <div className={s.emptyIcon}><div className={s.emptyIconInner} /></div>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px' }}>No products registered</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>Add your first GH180 product to begin compliance tracking.</div>
+            <div className={s.emptyTitle}>No products registered</div>
+            <div className={s.emptyDesc}>Add your first GH180 product to begin compliance tracking.</div>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => navigate('/product/new')}>Add First Product</button>
         </div>
       ) : (
-        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+        <div className={`card ${s.tableCard}`}>
           <table className="data-table">
             <thead>
               <tr>
@@ -117,51 +119,45 @@ export default function Products() {
                 const hex   = scoreHex(score);
                 return (
                   <tr key={p._id}>
+                    <td><div className={s.pName}>{p.name}</div></td>
                     <td>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{p.name}</div>
+                      <div className={`mono ${s.pModel}`}>{p.modelNumber || '—'}</div>
+                      <div className={`mono ${s.pFirmware}`}>{p.firmwareVersion || '—'}</div>
                     </td>
                     <td>
-                      <div className="mono" style={{ fontSize: '11px', color: 'var(--text-2)' }}>{p.modelNumber || '—'}</div>
-                      <div className="mono" style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>{p.firmwareVersion || '—'}</div>
+                      <span className={`mono ${s.craClass}`} style={{ ['--c' as any]: CRA_CLASS_COLOR[p.craClass] }}>
+                        {p.craClass || 'Default'}
+                      </span>
                     </td>
                     <td>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: '10px', fontWeight: 700,
-                        color: p.craClass === 'Important' ? 'var(--amber)' : p.craClass === 'Critical' ? 'var(--red)' : 'var(--text-2)',
-                        textTransform: 'uppercase', letterSpacing: '0.05em',
-                      }}>{p.craClass || 'Default'}</span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Row gap={3}>
                         <MiniRing score={score} hex={hex} />
-                        <span className="mono" style={{ fontSize: '15px', fontWeight: 700, color: hex }}>{score}%</span>
-                      </div>
+                        <span className={`mono ${s.score}`} style={{ ['--c' as any]: hex }}>{score}%</span>
+                      </Row>
                     </td>
-                    <td style={{ width: '110px' }}>
-                      <div className="pbar-track" style={{ height: '4px' }}>
+                    <td className={s.progressCol}>
+                      <div className="pbar-track" style={{ height: 6 }}>
                         <div className="pbar-fill" style={{ width: `${score}%`, background: hex, boxShadow: `0 0 6px ${hex}55` }} />
                       </div>
-                      <div className="mono" style={{ fontSize: '9px', color: 'var(--text-3)', marginTop: '4px' }}>
-                        {score}% complete
-                      </div>
+                      <div className={`mono ${s.progressNote}`}>{score}% complete</div>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      <Row gap={1}>
                         {p.hasNetworkInterface && <FlagChip label="NET"    color="var(--accent)" />}
                         {p.hasRemoteAccess     && <FlagChip label="REMOTE" color="var(--warning)" />}
                         {p.soldInEU            && <FlagChip label="EU"     color="var(--success)" />}
-                      </div>
+                      </Row>
                     </td>
-                    <td className="mono" style={{ fontSize: '11px', color: 'var(--text-2)' }}>
+                    <td className={`mono ${s.support}`}>
                       {p.supportPeriodYears ? `${p.supportPeriodYears} yr` : '—'}
                     </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                    <td className={s.actionsCell}>
+                      <Row gap={2} justify="end" wrap={false}>
                         <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/compliance/${p._id}`)}>Open</button>
-                        <button className="btn btn-danger btn-sm" disabled={deleting === p._id}
-                          onClick={() => setConfirmId(p._id)}>
+                        <button className="btn btn-danger btn-sm" disabled={deleting === p._id} onClick={() => setConfirmId(p._id)}>
                           {deleting === p._id ? '...' : 'Delete'}
                         </button>
-                      </div>
+                      </Row>
                     </td>
                   </tr>
                 );
@@ -185,9 +181,5 @@ export default function Products() {
 }
 
 function FlagChip({ label, color }) {
-  return (
-    <span style={{ fontFamily: 'var(--mono)', fontSize: '8.5px', fontWeight: 700, color, border: `1px solid ${color}30`, padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.05em', background: color + '0d' }}>
-      {label}
-    </span>
-  );
+  return <span className={`mono ${s.flag}`} style={{ ['--c' as any]: color }}>{label}</span>;
 }
