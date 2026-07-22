@@ -4,9 +4,12 @@ import Notification from '../models/Notification';
 import Advisory from '../models/Advisory';
 import Report from '../models/Report';
 import Activity from '../models/Activity';
-import { logActivity } from '../services/activityLog';
+import { logActivity, resolveActor } from '../services/activityLog';
 import { canTransition, isBackward, CLOSE_REASON_BY_STAGE, guardTransition } from '../services/stateMachine';
 import { isStaleWrite, STALE_WRITE_MESSAGE } from '../services/concurrency';
+import { UPLOAD_DIR } from '../services/upload';
+import fs from 'fs';
+import path from 'path';
 
 // 409 when the client's view of the case is stale (another officer wrote first)
 function staleResponse(res, ticket) {
@@ -65,9 +68,7 @@ export const get = async (req, res) => {
 
 export const create = async (req, res) => {
   try {
-    const year  = new Date().getFullYear();
-    const count = await Ticket.countDocuments({ ticketNumber: { $regex: `^PSIRT-${year}-` } });
-    const ticketNumber = `PSIRT-${year}-${String(count + 1).padStart(4, '0')}`;
+    const year = new Date().getFullYear();
 
     // Workflow-controlled fields are never accepted from the client
     const {
@@ -75,8 +76,24 @@ export const create = async (req, res) => {
       certNotifiedAt, disclosure, clockStartedAt, mitigationDeployedAt, ...body
     } = req.body;
 
-    const ticket = new Ticket({ ...body, ticketNumber, status: 'receipt' });
-    await ticket.save();
+    // Next sequence number = highest existing + 1 (NOT the document count,
+    // which breaks after a deletion leaves a gap). Retry on the rare race
+    // where two intakes pick the same number concurrently.
+    let ticket;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const last: any = await Ticket.findOne({ ticketNumber: { $regex: `^PSIRT-${year}-` } })
+        .sort({ ticketNumber: -1 }).select('ticketNumber').lean();
+      const lastSeq = last ? parseInt(last.ticketNumber.slice(-4), 10) || 0 : 0;
+      const ticketNumber = `PSIRT-${year}-${String(lastSeq + 1).padStart(4, '0')}`;
+      try {
+        ticket = await new Ticket({ ...body, ticketNumber, status: 'receipt' }).save();
+        break;
+      } catch (e: any) {
+        if (e.code === 11000 && attempt < 4) continue;   // number taken — recompute and retry
+        throw e;
+      }
+    }
+    const ticketNumber = ticket.ticketNumber;
 
     await logActivity(ticket._id, req.user.userId, {
       type: 'created',
@@ -96,7 +113,7 @@ export const create = async (req, res) => {
     await Notification.create({
       ticketId: ticket._id,
       audience: 'finder',
-      message:  `Acknowledgement sent to researcher with reference number ${ticketNumber} (7-day confirmation window per CVD policy). Case manager to be assigned (PSSO of affected product).`,
+      message:  `Acknowledgement sent to researcher with reference number ${ticketNumber} (7-day confirmation window per CVD policy). Duty manager to be assigned (PSIRT duty manager who receives the vulnerability issue).`,
     });
 
     res.status(201).json(ticket);
@@ -390,6 +407,11 @@ export const remove = async (req, res) => {
     const ticket = await Ticket.findById(req.params.id);
     if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
 
+    // Remove uploaded attachment files from disk before dropping the record.
+    (ticket.attachments || []).forEach((a: any) => {
+      if (a.filename) fs.unlink(path.join(UPLOAD_DIR, a.filename), () => {});
+    });
+
     await Promise.all([
       StatusHistory.deleteMany({ ticketId: ticket._id }),
       Activity.deleteMany({ ticketId: ticket._id }),
@@ -427,6 +449,89 @@ export const getRecentActivity = async (req, res) => {
 };
 
 // The Activity Timeline: chronological, system-generated audit trail.
+// ── File attachments (PDFs / screenshots) ────────────────────
+// The multer middleware (see routes) has already written the files to disk
+// and populated req.files; here we record their metadata on the ticket.
+export const addAttachments = async (req, res) => {
+  try {
+    const files = (req.files || []) as any[];
+    const ticket = await Ticket.findById(req.params.id);
+    if (!ticket) {
+      files.forEach(f => fs.unlink(f.path, () => {}));   // orphan cleanup
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+    if (!files.length) return res.status(400).json({ message: 'No files uploaded' });
+
+    const actor = await resolveActor(req.user.userId);
+    files.forEach(f => ticket.attachments.push({
+      originalName:   f.originalname,
+      filename:       f.filename,
+      mimeType:       f.mimetype,
+      size:           f.size,
+      uploadedByName: actor.name,
+      uploadedAt:     new Date(),
+    } as any));
+    ticket.updatedAt = new Date();
+    await ticket.save();
+
+    await logActivity(ticket._id, req.user.userId, {
+      type: 'stage_data',
+      action: `Uploaded ${files.length} attachment${files.length > 1 ? 's' : ''}`,
+      note: files.map(f => f.originalname).join(', '),
+      stageAfter: ticket.status,
+    });
+    res.status(201).json(ticket);
+  } catch (err) {
+    (req.files || []).forEach((f: any) => fs.unlink(f.path, () => {}));
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Streams a file back (inline so PDFs/images open in the browser tab). Auth is
+// via the standard header; the client fetches it as a blob.
+export const downloadAttachment = async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id).lean() as any;
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+    const att = (ticket.attachments || []).find((a: any) => String(a._id) === req.params.attId);
+    if (!att) return res.status(404).json({ message: 'Attachment not found' });
+
+    const filePath = path.join(UPLOAD_DIR, att.filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File is missing on the server' });
+
+    res.setHeader('Content-Type', att.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${String(att.originalName || 'file').replace(/"/g, '')}"`);
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const deleteAttachment = async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id);
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+    const att = (ticket.attachments as any).id(req.params.attId);
+    if (!att) return res.status(404).json({ message: 'Attachment not found' });
+
+    fs.unlink(path.join(UPLOAD_DIR, att.filename), () => {});
+    const name = att.originalName;
+    (ticket.attachments as any).pull(req.params.attId);
+    ticket.updatedAt = new Date();
+    await ticket.save();
+
+    await logActivity(ticket._id, req.user.userId, {
+      type: 'stage_data',
+      action: 'Removed an attachment',
+      note: name,
+      stageAfter: ticket.status,
+    });
+    res.json(ticket);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 export const getActivity = async (req, res) => {
   try {
     const activity = await Activity.find({ ticketId: req.params.id }).sort({ createdAt: 1 });

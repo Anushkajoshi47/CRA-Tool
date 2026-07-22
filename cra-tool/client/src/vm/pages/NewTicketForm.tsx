@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createTicket } from '../api/vmApi';
+import { createTicket, uploadAttachments } from '../api/vmApi';
 import type { SourceChannel } from '../../types';
 import { Stack, Row, Grid } from '../../components/primitives/layout';
 import s from '../../shared/FormPage.module.css';
@@ -20,8 +20,13 @@ export default function NewTicketForm() {
     isIncident:      false,
   });
   const [products, setProducts] = useState([{ name: '', version: '' }]);
+  const [references, setReferences] = useState([{ label: '', url: '' }]);
+  const [files, setFiles]       = useState<File[]>([]);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
+
+  const addFiles    = (list: FileList | null) => setFiles(f => [...f, ...Array.from(list || [])]);
+  const removeFile  = (i: number) => setFiles(f => f.filter((_, j) => j !== i));
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -29,6 +34,11 @@ export default function NewTicketForm() {
   const removeProduct = (i) => setProducts(p => p.filter((_, j) => j !== i));
   const setProduct    = (i, k, v) =>
     setProducts(p => p.map((item, j) => j === i ? { ...item, [k]: v } : item));
+
+  const addReference    = () => setReferences(r => [...r, { label: '', url: '' }]);
+  const removeReference = (i) => setReferences(r => r.filter((_, j) => j !== i));
+  const setReference    = (i, k, v) =>
+    setReferences(r => r.map((item, j) => j === i ? { ...item, [k]: v } : item));
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -38,8 +48,14 @@ export default function NewTicketForm() {
       const payload = {
         ...form,
         affectedProducts: products.filter(p => p.name || p.version),
+        references: references.filter(r => r.url.trim() || r.label.trim()),
       };
       const { data } = await createTicket(payload);
+      // Upload any chosen files to the freshly created case, then open it.
+      if (files.length) {
+        try { await uploadAttachments(data._id, files); }
+        catch { /* case is created; attachments can be re-added on the case page */ }
+      }
       navigate(`/vm/tickets/${data._id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create ticket');
@@ -142,8 +158,11 @@ export default function NewTicketForm() {
             <input className="input" value={form.reporterContact} onChange={e => set('reporterContact', e.target.value)} placeholder="Email or phone" />
           </div>
           <div style={{ marginTop: 'var(--space-3)' }}>
-            <label className="label">Case Manager (PSSO of affected product)</label>
-            <input className="input" value={form.caseManager} onChange={e => set('caseManager', e.target.value)} placeholder="Who navigates this ticket to closure" />
+            <label className="label">Duty Manager</label>
+            <p className={s.hint} style={{ marginTop: 0, marginBottom: 'var(--space-2)' }}>
+              PSIRT duty manager who receives the vulnerability issue.
+            </p>
+            <input className="input" value={form.caseManager} onChange={e => set('caseManager', e.target.value)} placeholder="e.g. on-call PSIRT duty manager" />
           </div>
         </section>
 
@@ -160,6 +179,59 @@ export default function NewTicketForm() {
             placeholder="Attack vector, observed behavior, reproduction steps, any additional context the reporter provided..."
             style={{ resize: 'vertical' }}
           />
+        </section>
+
+        {/* References & Attachments */}
+        <section>
+          <div className="section-label" style={{ marginBottom: 'var(--space-2)' }}>References &amp; Attachments</div>
+          <p className={s.hint} style={{ marginTop: 0, marginBottom: 'var(--space-3)' }}>
+            Upload PDFs or screenshots directly, or link to material hosted elsewhere.
+          </p>
+
+          {/* Upload files */}
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <label className="label">Upload files (PDF or images, max 10 MB each)</label>
+            <input
+              type="file"
+              multiple
+              accept=".pdf,image/png,image/jpeg,image/gif,image/webp"
+              onChange={e => { addFiles(e.target.files); e.target.value = ''; }}
+              style={{ display: 'block', fontSize: 12.5, color: 'var(--text-2)', marginTop: 4 }}
+            />
+            {files.length > 0 && (
+              <Stack gap={1} style={{ marginTop: 'var(--space-2)' }}>
+                {files.map((f, i) => (
+                  <Row key={i} gap={2} align="center">
+                    <span style={{ fontSize: 12.5, color: 'var(--text)' }}>{f.name}</span>
+                    <span className="mono" style={{ fontSize: 10.5, color: 'var(--text-3)' }}>{(f.size / 1024).toFixed(0)} KB</span>
+                    <button type="button" className="btn btn-ghost btn-xs" onClick={() => removeFile(i)}>Remove</button>
+                  </Row>
+                ))}
+              </Stack>
+            )}
+          </div>
+
+          <label className="label">Or add a link / URL</label>
+          <Stack gap={2}>
+            {references.map((r, i) => (
+              <Row key={i} gap={2} align="end">
+                <div className={s.productNameCol}>
+                  {i === 0 && <label className="label">Label</label>}
+                  <input className="input" value={r.label} onChange={e => setReference(i, 'label', e.target.value)} placeholder="e.g. PoC screenshot, packet capture" />
+                </div>
+                <div style={{ flex: 2 }}>
+                  {i === 0 && <label className="label">Link / URL</label>}
+                  <input className="input" type="url" value={r.url} onChange={e => setReference(i, 'url', e.target.value)} placeholder="https://…" />
+                </div>
+                {references.length > 1 && (
+                  <button type="button" className="btn btn-danger btn-sm" onClick={() => removeReference(i)} style={{ marginBottom: 1 }}>✕</button>
+                )}
+              </Row>
+            ))}
+          </Stack>
+          <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 'var(--space-2)' }} onClick={addReference}>
+            + Add Reference
+          </button>
         </section>
 
         {error && <div className={s.error}>{error}</div>}

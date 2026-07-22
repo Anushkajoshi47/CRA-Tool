@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getTicket, getTicketActivity, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport, transitionTicket, deleteTicket, updateTicket } from '../api/vmApi';
+import { getTicket, getTicketActivity, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport, transitionTicket, deleteTicket, updateTicket, uploadAttachments, deleteAttachment, openAttachment } from '../api/vmApi';
 import { stageLabel } from '../utils/lifecycleConfig';
 import { Stack, Row, Grid } from '../../components/primitives/layout';
 import s from './TicketDetail.module.css';
@@ -90,6 +90,19 @@ export default function TicketDetail() {
       setActionError(err.response?.data?.message || 'Could not move the case back');
       if (err.response?.status === 409) load();
     }
+  }
+
+  async function uploadCaseFiles(list: FileList | null) {
+    if (!list?.length) return;
+    setActionError('');
+    try { await uploadAttachments(id!, Array.from(list)); load(); }
+    catch (err: any) { setActionError(err.response?.data?.message || 'Upload failed'); }
+  }
+
+  async function removeAttachment(attId: string) {
+    setActionError('');
+    try { await deleteAttachment(id!, attId); load(); }
+    catch (err: any) { setActionError(err.response?.data?.message || 'Could not remove attachment'); }
   }
 
   async function removeCase() {
@@ -233,6 +246,52 @@ export default function TicketDetail() {
           </Row>
           <Field label="Title" value={ticket.title || '—'} />
           <Field label="Description" value={ticket.description} pre />
+          {/* Attachments (uploaded files) */}
+          <div>
+            <div className={s.fieldLabel}>Attachments</div>
+            {ticket.attachments?.length > 0 ? (
+              <Stack gap={1} style={{ marginTop: 'var(--space-1)' }}>
+                {ticket.attachments.map((a: any) => (
+                  <Row key={a._id} gap={2} align="center">
+                    <button type="button" className="btn btn-ghost btn-xs"
+                      onClick={() => openAttachment(id!, a._id)}
+                      title={`Open ${a.originalName}`}>
+                      <span className="mono" style={{ fontSize: 9, color: 'var(--text-3)', marginRight: 6 }}>
+                        {a.mimeType === 'application/pdf' ? 'PDF' : 'IMG'}
+                      </span>
+                      {a.originalName}
+                    </button>
+                    <span className="mono" style={{ fontSize: 10.5, color: 'var(--text-3)' }}>
+                      {(a.size / 1024).toFixed(0)} KB · {a.uploadedByName || 'unknown'}
+                    </span>
+                    <button type="button" className="btn btn-danger btn-xs" onClick={() => removeAttachment(a._id)}>Delete</button>
+                  </Row>
+                ))}
+              </Stack>
+            ) : (
+              <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 'var(--space-1)' }}>No files attached.</div>
+            )}
+            <label className="btn btn-ghost btn-xs" style={{ marginTop: 'var(--space-2)', display: 'inline-block', cursor: 'pointer' }}>
+              + Upload PDF / image
+              <input type="file" multiple accept=".pdf,image/png,image/jpeg,image/gif,image/webp"
+                style={{ display: 'none' }}
+                onChange={e => { uploadCaseFiles(e.target.files); e.target.value = ''; }} />
+            </label>
+          </div>
+
+          {ticket.references?.length > 0 && (
+            <div>
+              <div className={s.fieldLabel}>Links</div>
+              <Stack gap={1} style={{ marginTop: 'var(--space-1)' }}>
+                {ticket.references.map((r: any, i: number) => (
+                  <a key={i} href={r.url} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: 13, color: 'var(--accent)', wordBreak: 'break-all' }}>
+                    {r.label ? `${r.label} — ` : ''}{r.url}
+                  </a>
+                ))}
+              </Stack>
+            </div>
+          )}
           <Grid cols={4} gap={4}>
             <Field label="Reporter"          value={ticket.reporterName || '—'} />
             <Field label="Reporter Contact"  value={ticket.reporterContact || '—'} />
@@ -241,7 +300,7 @@ export default function TicketDetail() {
           </Grid>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 'var(--space-4)' }}>
             <Field label="Deployment Environment" value={ticket.environment || '—'} />
-            <Field label="Case Manager (PSSO)" value={ticket.caseManager || 'Unassigned'} />
+            <Field label="Duty Manager" value={ticket.caseManager || 'Unassigned'} />
             <Field label="Case Type"           value={ticket.isIncident ? 'Security Incident' : 'Vulnerability'} />
           </div>
           <Grid cols={4} gap={4}>
@@ -466,7 +525,7 @@ function IntakeEditor({ form, setForm, saving, onSave, onCancel }: any) {
           </select>
         </div>
         <div>
-          <label className="label">Case Manager (PSSO)</label>
+          <label className="label">Duty Manager</label>
           <input className="input" value={form.caseManager} onChange={e => set('caseManager', e.target.value)} placeholder="Owner" />
         </div>
         <div>

@@ -14,7 +14,7 @@ import type { Cvss } from '../../types';
 
 const STAGE_META: Record<string, { requires: string; next: string }> = {
   receipt: {
-    requires: 'A new report has been registered and the researcher acknowledged. Review the intake details, assign a case manager, then start validation.',
+    requires: 'A new report has been registered and the researcher acknowledged. Review the intake details, assign a duty manager, then start validation.',
     next: 'Validation — is this a valid report per the CVD policy?',
   },
   validation: {

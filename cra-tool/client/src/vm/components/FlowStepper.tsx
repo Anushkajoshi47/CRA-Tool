@@ -1,44 +1,64 @@
 import React from 'react';
-import { PHASES, CLOSE_PHASE, CLOSE_LABEL, phaseIndex } from '../utils/flowPhases';
-import { stageLabel } from '../utils/lifecycleConfig';
+import { CLOSE_LABEL } from '../utils/flowPhases';
 
-// Horizontal lifecycle bar at the top of the case page. Early closures show
-// a ✕ at the stage where the case exited; Reporting renders as "skipped"
-// for Exploitable (🟠) cases. When `onStageClick` is provided, earlier
-// stages are clickable — the case can be moved back to revise a decision
-// (every move is recorded in the audit trail).
+// Horizontal lifecycle bar at the top of the case page.
+//
+// This is a CONDENSED 5-phase VIEW of the real 8-stage workflow — the cases
+// still move through all 8 backend stages (receipt, validation, verification,
+// remediation, advisory, disclosure, reporting, closed); the 5 boxes below
+// simply group them so the case reads at a glance. Each display phase maps to
+// one or more real stages; the phase containing the current stage is
+// highlighted. Nothing here changes how the workflow actually runs.
+
+// key `back` = the real stage a click sends the case back to (revise).
+const DISPLAY_PHASES = [
+  { label: 'Receipt',      stages: ['receipt'],                  back: 'receipt' },
+  { label: 'Verification', stages: ['validation', 'verification'], back: 'verification' },
+  { label: 'Remediation',  stages: ['remediation'],              back: 'remediation' },
+  { label: 'Disclosure',   stages: ['advisory', 'disclosure'],   back: 'disclosure' },
+  { label: 'Distribution of Security Updates', stages: ['reporting'], back: 'reporting' },
+];
+
+const CLOSE_EXIT_STAGE: Record<string, string> = { invalid: 'validation', not_exploitable: 'verification' };
+
+function phaseOfStage(stage: string) {
+  const idx = DISPLAY_PHASES.findIndex(p => p.stages.includes(stage));
+  return idx === -1 ? 0 : idx;
+}
+
 export default function FlowStepper({ status, closedReason, classification, onStageClick }: {
   status: string;
   closedReason?: string | null;
   classification?: string | null;
   onStageClick?: (stageKey: string) => void;
 }) {
-  const isClosed   = status === 'closed';
-  const earlyExit  = isClosed && closedReason && closedReason !== 'completed';
-  const exitPhase  = earlyExit ? CLOSE_PHASE[closedReason] : null;
-  const currentIdx = earlyExit
-    ? PHASES.findIndex(p => p.key === exitPhase)
-    : phaseIndex(status);
+  const isClosed  = status === 'closed';
+  const earlyExit = isClosed && closedReason && closedReason !== 'completed';
+  const finished  = isClosed && !earlyExit;                       // ran the full journey
 
-  // Reporting is skipped entirely for exploitable cases
-  const reportingSkipped = classification === 'exploitable';
+  // Which display phase is "current" (active / exit point)
+  const currentIdx = earlyExit
+    ? phaseOfStage(CLOSE_EXIT_STAGE[closedReason!] || 'validation')
+    : phaseOfStage(status);
+
+  // The Distribution phase (reporting) is skipped for exploitable cases
+  const distributionSkipped = classification === 'exploitable';
 
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', paddingBottom: 2 }}>
-        {PHASES.map((p, i) => {
-          const finished = isClosed && !earlyExit;                    // full journey completed
-          const skipped  = p.key === 'reporting' && reportingSkipped;
-          const done     = !skipped && (finished ? true : i < currentIdx);
-          const active   = !finished && !skipped && i === currentIdx;
-          const exited   = active && !!earlyExit;
-          const color    = exited ? '#f87171'
+        {DISPLAY_PHASES.map((p, i) => {
+          const skipped = i === 4 && distributionSkipped;
+          const done    = !skipped && (finished ? true : i < currentIdx);
+          const active  = !finished && !skipped && i === currentIdx;
+          const exited  = active && !!earlyExit;
+          const color   = exited ? '#f87171'
             : done ? '#00e676'
             : active ? 'var(--accent)'
             : 'var(--text-3)';
-          const clickable = !!onStageClick && !skipped && p.key !== 'closed' && (i < currentIdx || isClosed);
+          const clickable = !!onStageClick && !skipped && (i < currentIdx || (isClosed && !earlyExit && i < 4));
           return (
-            <React.Fragment key={p.key}>
+            <React.Fragment key={p.label}>
               {i > 0 && (
                 <div style={{
                   flex: '0 1 24px', height: 2, marginTop: 11, minWidth: 4,
@@ -46,8 +66,8 @@ export default function FlowStepper({ status, closedReason, classification, onSt
                 }} />
               )}
               <div
-                onClick={clickable ? () => onStageClick!(p.key) : undefined}
-                title={clickable ? `Move the case back to ${stageLabel(p.key)}` : undefined}
+                onClick={clickable ? () => onStageClick!(p.back) : undefined}
+                title={clickable ? `Move the case back to ${p.label}` : undefined}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '1 1 0', minWidth: 0,
                   opacity: skipped ? 0.45 : 1,
@@ -68,11 +88,11 @@ export default function FlowStepper({ status, closedReason, classification, onSt
                   fontSize: 9.5, fontWeight: active ? 700 : 500, color: active ? color : 'var(--text-2)',
                   textAlign: 'center', marginTop: 6, lineHeight: 1.3, textTransform: 'uppercase', letterSpacing: '0.04em',
                 }}>
-                  {stageLabel(p.key)}
+                  {p.label}
                 </div>
                 {exited && (
                   <div style={{ fontSize: 9, color, marginTop: 2, textAlign: 'center', fontFamily: 'var(--mono)' }}>
-                    {CLOSE_LABEL[closedReason] || closedReason}
+                    {CLOSE_LABEL[closedReason!] || closedReason}
                   </div>
                 )}
                 {skipped && (

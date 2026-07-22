@@ -33,6 +33,26 @@ const ticketSchema = new mongoose.Schema({
   }],
   // Operational / deployment environment of the affected product
   environment:     { type: String, trim: true },
+
+  // Supporting material — attachments, screenshots, PoCs, advisory links.
+  // Stored as label + URL so the tool needs no binary file store; the team
+  // links to files held in their shared drive / tracker / advisory portal.
+  references: [{
+    label: { type: String, trim: true },   // e.g. "PoC screenshot", "Packet capture"
+    url:   { type: String, trim: true },
+  }],
+
+  // Uploaded files (PDFs, screenshots). The binary lives on disk under
+  // server/uploads/<filename>; only metadata is stored here. Each subdoc's
+  // _id is the handle used to download or delete the file.
+  attachments: [{
+    originalName:   { type: String, trim: true },   // name shown to users
+    filename:       { type: String, trim: true },   // random name on disk
+    mimeType:       { type: String, trim: true },
+    size:           { type: Number },
+    uploadedByName: { type: String, trim: true },
+    uploadedAt:     { type: Date, default: Date.now },
+  }],
   sourceChannel:   {
     type: String,
     enum: ['email', 'phone', 'internal_testing', 'supplier', 'other'],

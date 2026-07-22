@@ -18,6 +18,23 @@ export const resetCertNotification = (id: string) =>
   api.delete<Ticket>(`/vm/tickets/${id}/notify-cert`);
 export const deleteTicket = (id: string) =>
   api.delete(`/vm/tickets/${id}`);
+// Attachments — upload sends multipart; open fetches the file as a blob (so the
+// auth header is included) and opens it in a new tab; delete removes it.
+export const uploadAttachments = (id: string, files: File[]) => {
+  const fd = new FormData();
+  files.forEach(f => fd.append('files', f));
+  return api.post<Ticket>(`/vm/tickets/${id}/attachments`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+export const deleteAttachment = (id: string, attId: string) =>
+  api.delete<Ticket>(`/vm/tickets/${id}/attachments/${attId}`);
+export async function openAttachment(id: string, attId: string) {
+  const res = await api.get(`/vm/tickets/${id}/attachments/${attId}`, { responseType: 'blob' });
+  const url = URL.createObjectURL(res.data as Blob);
+  window.open(url, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
 export const getTicketActivity = (id: string)      => api.get<any[]>(`/vm/tickets/${id}/activity`);
 export const getRecentActivity = (limit = 10)       => api.get<any[]>(`/vm/tickets/feed/activity?limit=${limit}`);
 export const addComment = (id: string, content: string) =>

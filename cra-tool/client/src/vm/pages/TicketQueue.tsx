@@ -59,7 +59,7 @@ export default function TicketQueue() {
               'Case Type': t.isIncident ? 'incident' : 'vulnerability',
               'Affected Products': (t.affectedProducts || []).map(p => [p.name, p.version].filter(Boolean).join(' ')).join('; '),
               Source: t.sourceChannel,
-              'Case Manager': t.caseManager || '',
+              'Duty Manager': t.caseManager || '',
               Classification: t.classification ? t.classification.replace(/_/g, ' ') : 'unclassified',
               CVSS: t.cvss?.score != null ? Number(t.cvss.score).toFixed(1) : '',
               'CRA Clock Started': t.clockStartedAt || '',

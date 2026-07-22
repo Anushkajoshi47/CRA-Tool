@@ -6,6 +6,10 @@ import auth from '../middleware/auth';
 
 const router = express.Router();
 
+// How long a login stays valid. 30 days suits a small internal team — long
+// enough to avoid frequent re-logins, short enough to bound a leaked token.
+const TOKEN_TTL = '30d';
+
 router.post('/register', async (req, res) => {
   try {
     const { email, password, name, orgName } = req.body;
@@ -19,7 +23,7 @@ router.post('/register', async (req, res) => {
     const user = await User.create({ email, password: hashed, name: name || '', orgName: orgName || '' });
 
     const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: TOKEN_TTL,
     });
 
     res.status(201).json({ token, email: user.email, name: user.name || '', orgName: user.orgName || '' });
@@ -41,7 +45,7 @@ router.post('/login', async (req, res) => {
     if (!match) return res.status(401).json({ message: 'Invalid credentials' });
 
     const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: TOKEN_TTL,
     });
 
     res.json({ token, email: user.email, name: user.name || '', orgName: user.orgName || '' });
