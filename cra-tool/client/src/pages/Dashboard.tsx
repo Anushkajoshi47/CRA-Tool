@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { Stack, Row, Grid } from '../components/primitives/layout';
+import { useTimeFmt, fmtDate } from '../shared/timezone';
 import s from './Dashboard.module.css';
 
 /* ── Constants ──────────────────────────────────────────────── */
@@ -196,12 +197,13 @@ function activityTimeAgo(date) {
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   if (s < 604800) return `${Math.floor(s / 86400)}d ago`;
-  return new Date(date).toLocaleDateString();
+  return fmtDate(date);
 }
 
 // Team-wide audit feed: shows WHO changed what across the shared product
 // registry. Timestamps render in each viewer's local timezone.
 function RecentActivity() {
+  const fmt = useTimeFmt();
   const [feed, setFeed] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -234,7 +236,7 @@ function RecentActivity() {
                   <Row gap={2} align="baseline" style={{ marginBottom: 3 }}>
                     <span className={s.raActor}>{a.actorName || 'System'}</span>
                     {a.actorOrg && <span className={s.raOrg}>· {a.actorOrg}</span>}
-                    <span className={`mono ${s.raTime}`} title={new Date(a.createdAt).toLocaleString()}>
+                    <span className={`mono ${s.raTime}`} title={fmt.dateTime(a.createdAt)}>
                       {activityTimeAgo(a.createdAt)}
                     </span>
                   </Row>

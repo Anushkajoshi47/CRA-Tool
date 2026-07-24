@@ -5,7 +5,7 @@ import type { SourceChannel } from '../../types';
 import { Stack, Row, Grid } from '../../components/primitives/layout';
 import s from '../../shared/FormPage.module.css';
 
-const SOURCE_CHANNELS = ['email', 'phone', 'internal_testing', 'supplier', 'other'];
+const SOURCE_CHANNELS = ['email', 'phone', 'internal_testing', 'supplier', 'threat_intelligence', 'other'];
 
 export default function NewTicketForm() {
   const navigate = useNavigate();
@@ -13,7 +13,9 @@ export default function NewTicketForm() {
     title:           '',
     sourceChannel:   'email' as SourceChannel,
     reporterName:    '',
-    reporterContact: '',
+    reporterEmail:   '',
+    reporterPhone:   '',
+    reporterAddress: '',
     caseManager:     '',
     environment:     '',
     description:     '',
@@ -100,8 +102,8 @@ export default function NewTicketForm() {
                   <input className="input" value={p.name} onChange={e => setProduct(i, 'name', e.target.value)} placeholder="e.g. GH180" />
                 </div>
                 <div className={s.productVerCol}>
-                  {i === 0 && <label className="label">Version / Firmware</label>}
-                  <input className="input" value={p.version} onChange={e => setProduct(i, 'version', e.target.value)} placeholder="e.g. fw2.1" />
+                  {i === 0 && <label className="label">Affected Version(s)</label>}
+                  <input className="input" value={p.version} onChange={e => setProduct(i, 'version', e.target.value)} placeholder="e.g. 2.0, 2.1, 2.2 … 2.7" />
                 </div>
                 {products.length > 1 && (
                   <button type="button" className="btn btn-danger btn-sm" onClick={() => removeProduct(i)} style={{ marginBottom: 1 }}>✕</button>
@@ -109,6 +111,9 @@ export default function NewTicketForm() {
               </Row>
             ))}
           </Stack>
+          <p className={s.hint} style={{ marginTop: 'var(--space-1)', marginBottom: 'var(--space-2)' }}>
+            List several affected versions comma-separated (e.g. 2.0, 2.1, 2.2), or add a separate row per product.
+          </p>
           <button type="button" className="btn btn-ghost btn-sm" onClick={addProduct}>+ Add Product</button>
           <div style={{ marginTop: 'var(--space-3)' }}>
             <label className="label">Operational / Deployment Environment</label>
@@ -131,12 +136,12 @@ export default function NewTicketForm() {
               value={form.isIncident ? 'incident' : 'vulnerability'}
               onChange={e => set('isIncident', e.target.value === 'incident')}
             >
-              <option value="vulnerability">Vulnerability report</option>
-              <option value="incident">Serious security incident (CRA Art. 14 §3)</option>
+              <option value="vulnerability">Vulnerability</option>
+              <option value="incident">Security Incident</option>
             </select>
             <p className={s.hint}>
-              Incidents follow the same handling flow but the final report to ENISA is due
-              1 month after notification instead of 14 days after mitigation.
+              A Security Incident follows the same handling flow but the final report to ENISA is
+              due 1 month after notification instead of 14 days after mitigation.
             </p>
           </div>
           <Grid cols={2} gap={3}>
@@ -144,7 +149,7 @@ export default function NewTicketForm() {
               <label className="label">Received Via *</label>
               <select className="input" value={form.sourceChannel} onChange={e => set('sourceChannel', e.target.value)} required>
                 {SOURCE_CHANNELS.map(c => (
-                  <option key={c} value={c}>{c.replace('_', ' ')}</option>
+                  <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
                 ))}
               </select>
             </div>
@@ -153,9 +158,19 @@ export default function NewTicketForm() {
               <input className="input" value={form.reporterName} onChange={e => set('reporterName', e.target.value)} placeholder="Researcher / reporter name" />
             </div>
           </Grid>
+          <Grid cols={2} gap={3} style={{ marginTop: 'var(--space-3)' }}>
+            <div>
+              <label className="label">Contact Email</label>
+              <input className="input" type="email" value={form.reporterEmail} onChange={e => set('reporterEmail', e.target.value)} placeholder="name@example.com" />
+            </div>
+            <div>
+              <label className="label">Phone Number</label>
+              <input className="input" value={form.reporterPhone} onChange={e => set('reporterPhone', e.target.value)} placeholder="+49 …" />
+            </div>
+          </Grid>
           <div style={{ marginTop: 'var(--space-3)' }}>
-            <label className="label">Reporter Contact</label>
-            <input className="input" value={form.reporterContact} onChange={e => set('reporterContact', e.target.value)} placeholder="Email or phone" />
+            <label className="label">Postal Address</label>
+            <input className="input" value={form.reporterAddress} onChange={e => set('reporterAddress', e.target.value)} placeholder="Location / postal address" />
           </div>
           <div style={{ marginTop: 'var(--space-3)' }}>
             <label className="label">Duty Manager</label>

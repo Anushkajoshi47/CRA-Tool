@@ -4,12 +4,14 @@ import { getTickets, deleteTicket } from '../api/vmApi';
 import StatusBadge, { ClassificationBadge } from '../components/StatusBadge';
 import { computeDeadlines, timeRemaining } from '../utils/clockCalculations';
 import { exportCsv } from '../../shared/exportCsv';
+import { useTimeFmt } from '../../shared/timezone';
 import { Row } from '../../components/primitives/layout';
 import ConfirmDialog from '../../shared/ConfirmDialog';
 import s from './TicketQueue.module.css';
 
 export default function TicketQueue() {
   const navigate = useNavigate();
+  const fmt = useTimeFmt();
   const [tickets, setTickets]     = useState([]);
   const [loading, setLoading]     = useState(true);
   const [filterStatus, setFilter] = useState('');
@@ -139,7 +141,7 @@ export default function TicketQueue() {
                   <td className={`${s.deadline} ${rem?.overdue ? s.overdue : rem ? s.active : ''}`}>
                     {rem ? rem.label : '—'}
                   </td>
-                  <td className={s.created}>{new Date(t.createdAt).toLocaleDateString()}</td>
+                  <td className={s.created}>{fmt.date(t.createdAt)}</td>
                   <td className={s.actionsCell}>
                     <button
                       className="btn btn-danger btn-xs"

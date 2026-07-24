@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { getStages, saveStages, resetStages, DEFAULT_STAGES, StageConfig } from '../utils/lifecycleConfig';
 import { getTheme, applyTheme, ThemeMode } from '../../shared/theme';
+import { TIMEZONES, getTimezone, setTimezone, fmtDateTime } from '../../shared/timezone';
 import { Stack, Row, Grid } from '../../components/primitives/layout';
 import s from './VmSettings.module.css';
 
-// Settings for the Vulnerability Management workspace: the editable
-// lifecycle (stage names & descriptions) and appearance.
+// Settings for the Vulnerability Management workspace: display timezone
+// and appearance.
 
 export default function VmSettings() {
   return (
@@ -14,80 +14,50 @@ export default function VmSettings() {
         <div className="section-label" style={{ marginBottom: 'var(--space-1)' }}>Vulnerability Management</div>
         <h1 className={s.title}>Settings</h1>
         <p className={s.subtitle}>
-          Customize how the vulnerability-handling lifecycle is presented across the VM workspace.
+          Preferences for the VM workspace — how times are shown and the app's appearance.
         </p>
       </div>
 
       <Stack gap={6}>
-        <LifecycleEditor />
+        <TimezoneSection />
         <AppearanceSection />
       </Stack>
     </div>
   );
 }
 
-/* ── Lifecycle stage editor ──────────────────────────────────── */
-function LifecycleEditor() {
-  const [stages, setStages]   = useState<StageConfig[]>(getStages());
-  const [message, setMessage] = useState('');
+/* ── Display timezone ────────────────────────────────────────── */
+function TimezoneSection() {
+  const [tz, setTz] = useState(getTimezone());
+  const now = new Date().toISOString();
 
-  function update(key: string, field: 'label' | 'desc', value: string) {
-    setStages(prev => prev.map(st => (st.key === key ? { ...st, [field]: value } : st)));
-    setMessage('');
-  }
-
-  function save() {
-    saveStages(stages);
-    setStages(getStages());
-    setMessage('Lifecycle saved. Stage names and descriptions now apply across the dashboard, stepper, and case pages.');
-  }
-
-  function reset() {
-    resetStages();
-    setStages(getStages());
-    setMessage('Lifecycle reset to defaults.');
+  function choose(id: string) {
+    setTimezone(id);
+    setTz(id);
   }
 
   return (
     <section className={`card card-flat ${s.section}`}>
-      <h2 className={s.sectionTitle}>Lifecycle Stages</h2>
+      <h2 className={s.sectionTitle}>Display Timezone</h2>
       <p className={s.sectionDesc}>
-        Rename stages and edit their descriptions — changes apply everywhere the lifecycle is shown
-        (dashboard journey, case progress bar, status badges). The underlying workflow and its rules are unchanged.
+        The team works across regions, so pick the zone all dates and times are shown in throughout
+        the app. Times are always stored in UTC — this only changes how they're displayed for you.
       </p>
 
-      <Stack gap={2}>
-        {stages.map((st, i) => {
-          const def = DEFAULT_STAGES[i];
+      <Grid min="220px" gap={3}>
+        {TIMEZONES.map(z => {
+          const active = tz === z.id;
           return (
-            <div key={st.key} className={`card ${s.stageCard}`}>
-              <div className={s.stageGrid}>
-                <div>
-                  <label className={`label ${s.stageNumLabel}`}>
-                    <span className={`mono ${s.stageNum}`}>{String(i + 1).padStart(2, '0')}</span>
-                    Stage Name
-                  </label>
-                  <input className="input" value={st.label} onChange={e => update(st.key, 'label', e.target.value)} placeholder={def.label} />
-                </div>
-                <div>
-                  <label className="label">Description</label>
-                  <input className="input" value={st.desc} onChange={e => update(st.key, 'desc', e.target.value)} placeholder={def.desc} />
-                </div>
+            <button key={z.id} onClick={() => choose(z.id)} className={`card card-flat ${s.themeCard}`} data-active={active}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
+                <span className={s.themeDot} data-active={active} />
+                <span className={s.themeLabel}>{z.label}</span>
               </div>
-              {(st.label !== def.label || st.desc !== def.desc) && (
-                <div className={s.stageDefault}>Default: {def.label} — {def.desc}</div>
-              )}
-            </div>
+              <div className={`mono ${s.themeDesc}`}>{fmtDateTime(now, z.id)}</div>
+            </button>
           );
         })}
-      </Stack>
-
-      {message && <div className={s.saved}>{message}</div>}
-
-      <Row gap={2} style={{ marginTop: 'var(--space-4)' }}>
-        <button className="btn btn-primary btn-sm" onClick={save}>Save Lifecycle</button>
-        <button className="btn btn-ghost btn-sm" onClick={reset}>Reset to Defaults</button>
-      </Row>
+      </Grid>
     </section>
   );
 }

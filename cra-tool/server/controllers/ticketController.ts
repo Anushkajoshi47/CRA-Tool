@@ -128,7 +128,7 @@ export const update = async (req, res) => {
     const {
       status, classification, closedReason, cvss, remediation, advisoryChecks,
       certNotifiedAt, disclosure, clockStartedAt, mitigationDeployedAt, ticketNumber,
-      expectedUpdatedAt, ...allowed
+      receipt, validation, verification, expectedUpdatedAt, ...allowed
     } = req.body;
     allowed.updatedAt = new Date();
 
@@ -170,7 +170,7 @@ export const updateStageData = async (req, res) => {
     }
     if (isStaleWrite(ticket.updatedAt, req.body.expectedUpdatedAt)) return staleResponse(res, ticket);
 
-    const { remediation, advisoryChecks, disclosure } = req.body;
+    const { remediation, advisoryChecks, disclosure, receipt, validation, verification, cvss } = req.body;
     const merge = (current: any, patch: any) => ({
       ...(current && typeof current.toObject === 'function' ? current.toObject() : current),
       ...patch,
@@ -178,6 +178,12 @@ export const updateStageData = async (req, res) => {
     if (remediation)    ticket.set('remediation',    merge(ticket.remediation, remediation));
     if (advisoryChecks) ticket.set('advisoryChecks', merge(ticket.advisoryChecks, advisoryChecks));
     if (disclosure)     ticket.set('disclosure',     merge(ticket.disclosure, disclosure));
+    if (receipt)        ticket.set('receipt',        merge(ticket.receipt, receipt));
+    if (validation)     ticket.set('validation',     merge(ticket.validation, validation));
+    if (verification)   ticket.set('verification',   merge(ticket.verification, verification));
+    // CVSS is documented alongside the verification assessment (the transition
+    // also persists it, but this lets "Save Assessment" keep the score).
+    if (cvss && cvss.score != null) ticket.set('cvss', merge(ticket.cvss, cvss));
     ticket.updatedAt = new Date();
     await ticket.save();
 
@@ -185,6 +191,10 @@ export const updateStageData = async (req, res) => {
       remediation    && 'remediation documentation',
       advisoryChecks && 'advisory readiness checks',
       disclosure     && 'disclosure details',
+      receipt        && 'receipt acknowledgement',
+      validation     && 'validation notification',
+      verification   && 'verification assessment',
+      (cvss && cvss.score != null) && 'CVSS score',
     ].filter(Boolean).join(', ');
     await logActivity(ticket._id, req.user.userId, {
       type: 'stage_data',

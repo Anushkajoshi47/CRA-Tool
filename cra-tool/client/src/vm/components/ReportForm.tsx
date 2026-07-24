@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createReport, updateReport } from '../api/vmApi';
 import { computeDeadlines } from '../utils/clockCalculations';
+import { useTimeFmt } from '../../shared/timezone';
 
 const TYPE_LABELS = {
   initial:  '24h Initial Report (Early Warning)',
@@ -9,6 +10,7 @@ const TYPE_LABELS = {
 };
 
 export default function ReportForm({ ticket, existingReport, onSaved, onCancel }: any) {
+  const fmt = useTimeFmt();
   const [type, setType]       = useState(existingReport?.type || 'initial');
   const [content, setContent] = useState(existingReport?.content || '');
   const [loading, setLoading] = useState(false);
@@ -56,7 +58,7 @@ export default function ReportForm({ ticket, existingReport, onSaved, onCancel }
           borderRadius: 'var(--radius-sm)',
           border: '1px solid rgba(245,158,11,0.2)',
         }}>
-          Due: {new Date(dueAt).toLocaleString()}
+          Due: {fmt.dateTime(dueAt.toISOString())}
         </div>
       )}
 

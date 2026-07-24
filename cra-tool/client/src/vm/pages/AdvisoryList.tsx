@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAdvisories } from '../api/vmApi';
+import { useTimeFmt } from '../../shared/timezone';
 
 export default function AdvisoryList() {
+  const fmt = useTimeFmt();
   const [advisories, setAdvisories] = useState([]);
   const [loading, setLoading]       = useState(true);
 
@@ -74,7 +76,7 @@ export default function AdvisoryList() {
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   {a.publishedAt && (
                     <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>
-                      Published {new Date(a.publishedAt).toLocaleDateString()}
+                      Published {fmt.date(a.publishedAt)}
                     </div>
                   )}
                   <Link to={`/vm/tickets/${a.ticketId}`} style={{ fontSize: 12, color: 'var(--accent)' }}>

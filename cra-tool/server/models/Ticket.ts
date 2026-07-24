@@ -26,10 +26,15 @@ const ticketSchema = new mongoose.Schema({
   title:           { type: String, trim: true },
   description:     { type: String, required: true },
   reporterName:    { type: String, trim: true },
+  // Contact info split per the CRA detection-phase fields (email / phone /
+  // location). `reporterContact` is kept for older cases created before the split.
   reporterContact: { type: String, trim: true },
+  reporterEmail:   { type: String, trim: true },
+  reporterPhone:   { type: String, trim: true },
+  reporterAddress: { type: String, trim: true },   // postal address / location
   affectedProducts: [{
     name:    { type: String, trim: true },
-    version: { type: String, trim: true },
+    version: { type: String, trim: true },   // may list several, e.g. "2.0, 2.1, 2.2"
   }],
   // Operational / deployment environment of the affected product
   environment:     { type: String, trim: true },
@@ -55,7 +60,7 @@ const ticketSchema = new mongoose.Schema({
   }],
   sourceChannel:   {
     type: String,
-    enum: ['email', 'phone', 'internal_testing', 'supplier', 'other'],
+    enum: ['email', 'phone', 'internal_testing', 'supplier', 'threat_intelligence', 'other'],
     required: true,
   },
 
@@ -68,6 +73,25 @@ const ticketSchema = new mongoose.Schema({
   status:           { type: String, enum: TICKET_STATES, default: 'receipt' },
   classification:   { type: String, enum: [...CLASSIFICATIONS, null], default: null },
   closedReason:     { type: String, enum: [...CLOSED_REASONS, null], default: null },
+
+  // ── Receipt stage — researcher acknowledgement (CVD policy) ──
+  receipt: {
+    researcherNotified:   { type: Boolean, default: false },
+    researcherNotifiedAt: { type: Date },   // recorded time (shown in CEST on the client)
+  },
+
+  // ── Validation stage — researcher informed the report is valid ──
+  validation: {
+    researcherNotified:   { type: Boolean, default: false },
+    researcherNotifiedAt: { type: Date },
+  },
+
+  // ── Verification stage — assessment notes + risk ──────────────
+  verification: {
+    observations:   { type: String, trim: true },
+    attachmentLink: { type: String, trim: true },
+    riskLevel:      { type: String },   // Low | Moderate | High | Critical
+  },
 
   // CVSS 3.1 base score — completed during verification; drives severity/priority
   cvss: {

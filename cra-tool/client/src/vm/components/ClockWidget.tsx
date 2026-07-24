@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { computeDeadlines, timeRemaining } from '../utils/clockCalculations';
+import { useTimeFmt } from '../../shared/timezone';
 
 export default function ClockWidget({ clockStartedAt, mitigationDeployedAt, isIncident }: any) {
+  const fmt = useTimeFmt();
   const [, tick] = useState(0);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function ClockWidget({ clockStartedAt, mitigationDeployedAt, isIn
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="8" cy="8.5" r="5.5" /><path d="M8 5.5v3l2 1.2M6.5 1.5h3" />
         </svg>
-        CRA Art. 14 Clock Running — started {new Date(clockStartedAt).toLocaleString()}
+        CRA Art. 14 Clock Running — started {fmt.dateTime(clockStartedAt)}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
         {rows.map(({ label, due }) => {
@@ -52,7 +54,7 @@ export default function ClockWidget({ clockStartedAt, mitigationDeployedAt, isIn
                     {rem?.label}
                   </div>
                   <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
-                    {new Date(due).toLocaleString()}
+                    {fmt.dateTime(due.toISOString())}
                   </div>
                 </>
               ) : (

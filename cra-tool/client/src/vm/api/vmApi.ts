@@ -10,7 +10,9 @@ export const createTicket     = (data: Partial<Ticket>)             => api.post<
 export const updateTicket     = (id: string, data: Partial<Ticket> & { expectedUpdatedAt?: string }) => api.patch<Ticket>(`/vm/tickets/${id}`, data);
 export const transitionTicket = (id: string, data: { toStatus: string; note?: string; classification?: string; cvss?: any; expectedUpdatedAt?: string }) =>
   api.post<Ticket>(`/vm/tickets/${id}/transition`, data);
-export const updateStageData = (id: string, data: Pick<Partial<Ticket>, 'remediation' | 'advisoryChecks' | 'disclosure'> & { expectedUpdatedAt?: string }) =>
+// Stage documentation: remediation / advisory / disclosure / receipt /
+// validation / verification blobs (each optional), never a workflow decision.
+export const updateStageData = (id: string, data: { [k: string]: any; expectedUpdatedAt?: string }) =>
   api.patch<Ticket>(`/vm/tickets/${id}/stage-data`, data);
 export const notifyCert = (id: string, data: { note?: string } = {}) =>
   api.post<Ticket>(`/vm/tickets/${id}/notify-cert`, data);

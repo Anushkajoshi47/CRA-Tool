@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getTicket, getTicketActivity, getTicketNotifications, getReports, getAdvisories, updateReport, deleteReport, transitionTicket, deleteTicket, updateTicket, uploadAttachments, deleteAttachment, openAttachment } from '../api/vmApi';
 import { stageLabel } from '../utils/lifecycleConfig';
+import { useTimeFmt } from '../../shared/timezone';
 import { Stack, Row, Grid } from '../../components/primitives/layout';
 import s from './TicketDetail.module.css';
 import ConfirmDialog from '../../shared/ConfirmDialog';
@@ -24,6 +25,7 @@ const AUDIENCE_META = {
 export default function TicketDetail() {
   const { id }   = useParams();
   const navigate = useNavigate();
+  const fmt      = useTimeFmt();
   const [ticket,  setTicket]        = useState(null);
   const [activity, setActivity]     = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -47,7 +49,9 @@ export default function TicketDetail() {
       title:           ticket.title || '',
       description:     ticket.description || '',
       reporterName:    ticket.reporterName || '',
-      reporterContact: ticket.reporterContact || '',
+      reporterEmail:   ticket.reporterEmail || '',
+      reporterPhone:   ticket.reporterPhone || '',
+      reporterAddress: ticket.reporterAddress || '',
       environment:     ticket.environment || '',
       caseManager:     ticket.caseManager || '',
       sourceChannel:   ticket.sourceChannel || 'email',
@@ -185,20 +189,23 @@ export default function TicketDetail() {
         {ticket.title && <div className={s.title}>{ticket.title}</div>}
         {ticket.affectedProducts?.length > 0 && (
           <div className={s.products}>
-            {ticket.affectedProducts.map((p, i) => (
-              <span key={i} style={{ marginRight: 14 }}>
+            {ticket.affectedProducts.map((p: any, i: number) => (
+              <span key={i} style={{ marginRight: 14, display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
                 <span className={s.productName}>{p.name}</span>
-                {p.version && <span className={s.productVer}>{p.version}</span>}
+                {splitVersions(p.version).map((v, j) => (
+                  <span key={j} className={s.productVer}>{v}</span>
+                ))}
               </span>
             ))}
           </div>
         )}
         <Row gap={5} className={s.metaRow}>
           <span>Reported by <span className={s.metaStrong}>{ticket.reporterName || 'Anonymous'}</span>
-            {ticket.reporterContact && <span className={s.metaValue}> · {ticket.reporterContact}</span>}
+            {(ticket.reporterEmail || ticket.reporterContact) &&
+              <span className={s.metaValue}> · {ticket.reporterEmail || ticket.reporterContact}</span>}
           </span>
           <span>via <span className={s.metaValue}>{ticket.sourceChannel?.replace(/_/g, ' ')}</span></span>
-          <span>on <span className={s.metaValue}>{new Date(ticket.createdAt).toLocaleDateString()}</span></span>
+          <span>on <span className={s.metaValue}>{fmt.date(ticket.createdAt)}</span></span>
           <span>Owner: <span className={s.metaValue}>{ticket.caseManager || 'Unassigned'}</span></span>
         </Row>
       </div>
@@ -294,10 +301,41 @@ export default function TicketDetail() {
           )}
           <Grid cols={4} gap={4}>
             <Field label="Reporter"          value={ticket.reporterName || '—'} />
-            <Field label="Reporter Contact"  value={ticket.reporterContact || '—'} />
-            <Field label="Source Channel"    value={ticket.sourceChannel?.replace(/_/g, ' ')} />
-            <Field label="Date Reported"     value={new Date(ticket.createdAt).toLocaleDateString()} />
+            <Field label="Contact Email"     value={ticket.reporterEmail || ticket.reporterContact || '—'} />
+            <Field label="Phone Number"      value={ticket.reporterPhone || '—'} />
+            <Field label="Postal Address"    value={ticket.reporterAddress || '—'} />
           </Grid>
+          <Grid cols={4} gap={4}>
+            <Field label="Source Channel"    value={ticket.sourceChannel?.replace(/_/g, ' ')} />
+            <Field label="Date Reported"     value={fmt.date(ticket.createdAt)} />
+            <Field label="Researcher Acknowledged" value={
+              ticket.receipt?.researcherNotified
+                ? (ticket.receipt.researcherNotifiedAt ? fmt.dateTime(ticket.receipt.researcherNotifiedAt) : 'Yes')
+                : 'Not yet'
+            } />
+            <Field label="Validity Confirmed" value={
+              ticket.validation?.researcherNotified
+                ? (ticket.validation.researcherNotifiedAt ? fmt.dateTime(ticket.validation.researcherNotifiedAt) : 'Yes')
+                : 'Not yet'
+            } />
+          </Grid>
+          {(ticket.verification?.observations || ticket.verification?.riskLevel || ticket.verification?.attachmentLink) && (
+            <Stack gap={4}>
+              <div className="section-label">Verification Assessment</div>
+              {ticket.verification?.observations && <Field label="Observations" value={ticket.verification.observations} pre />}
+              <Grid cols={2} gap={4}>
+                <Field label="Risk Level" value={ticket.verification?.riskLevel || '—'} />
+                <div>
+                  <div className={s.fieldLabel}>Evidence Link</div>
+                  <div className={s.fieldValue}>
+                    {ticket.verification?.attachmentLink
+                      ? <a href={ticket.verification.attachmentLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', wordBreak: 'break-all' }}>{ticket.verification.attachmentLink}</a>
+                      : '—'}
+                  </div>
+                </div>
+              </Grid>
+            </Stack>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 'var(--space-4)' }}>
             <Field label="Deployment Environment" value={ticket.environment || '—'} />
             <Field label="Duty Manager" value={ticket.caseManager || 'Unassigned'} />
@@ -310,18 +348,18 @@ export default function TicketDetail() {
               : 'Not yet classified'
             } />
             <Field label="CVSS" value={ticket.cvss?.score != null ? `${Number(ticket.cvss.score).toFixed(1)} (${ticket.cvss.severity})` : '—'} />
-            <Field label="CERT Notified" value={ticket.certNotifiedAt ? new Date(ticket.certNotifiedAt).toLocaleDateString() : '—'} />
+            <Field label="CERT Notified" value={ticket.certNotifiedAt ? fmt.date(ticket.certNotifiedAt) : '—'} />
             <Field label="Outcome" value={ticket.closedReason ? ticket.closedReason.replace(/_/g, ' ') : 'Open'} />
           </Grid>
           <Grid cols={2} gap={4}>
-            <Field label="Created"      value={new Date(ticket.createdAt).toLocaleString()} />
-            <Field label="Last Updated" value={new Date(ticket.updatedAt).toLocaleString()} />
+            <Field label="Created"      value={fmt.dateTime(ticket.createdAt)} />
+            <Field label="Last Updated" value={fmt.dateTime(ticket.updatedAt)} />
           </Grid>
           {ticket.clockStartedAt && (
-            <Field label="CRA Clock Started" value={new Date(ticket.clockStartedAt).toLocaleString()} />
+            <Field label="CRA Clock Started" value={fmt.dateTime(ticket.clockStartedAt)} />
           )}
           {ticket.mitigationDeployedAt && (
-            <Field label="Mitigation Deployed" value={new Date(ticket.mitigationDeployedAt).toLocaleString()} />
+            <Field label="Mitigation Deployed" value={fmt.dateTime(ticket.mitigationDeployedAt)} />
           )}
         </Stack>
       )}
@@ -342,7 +380,7 @@ export default function TicketDetail() {
                   <span className={s.commBadge} style={{ ['--c' as any]: meta.color }}>{meta.label}</span>
                   <div style={{ flex: 1 }}>
                     <p className={s.commMsg}>{n.message}</p>
-                    <div className={s.commTime}>{new Date(n.createdAt).toLocaleString()}</div>
+                    <div className={s.commTime}>{fmt.dateTime(n.createdAt)}</div>
                   </div>
                 </Row>
               );
@@ -394,7 +432,7 @@ export default function TicketDetail() {
                         {r.submittedAt
                           ? <span className="pill pill-done">Submitted</span>
                           : <span className="pill pill-pending">Draft</span>}
-                        {r.dueAt && <span className={s.repDue}>Due: {new Date(r.dueAt).toLocaleString()}</span>}
+                        {r.dueAt && <span className={s.repDue}>Due: {fmt.dateTime(r.dueAt)}</span>}
                       </Row>
                       <p className={s.repContent}>{r.content}</p>
                       <Row gap={2} style={{ marginTop: 'var(--space-3)' }}>
@@ -406,7 +444,7 @@ export default function TicketDetail() {
                           <button className="btn btn-danger btn-xs" onClick={() => setDeletingReport(r)}>Delete</button>
                         )}
                         {r.submittedAt && (
-                          <span className={s.repSubmitted}>Submitted {new Date(r.submittedAt).toLocaleString()}</span>
+                          <span className={s.repSubmitted}>Submitted {fmt.dateTime(r.submittedAt)}</span>
                         )}
                       </Row>
                     </div>
@@ -449,6 +487,13 @@ export default function TicketDetail() {
   );
 }
 
+// A version field may hold several affected versions ("2.0, 2.1, 2.2 … 2.7").
+// Split on commas/whitespace/ellipsis so each renders as its own chip.
+function splitVersions(version?: string): string[] {
+  if (!version) return [];
+  return version.split(/[,;]|\s+…\s+|\s{2,}/).map(v => v.trim()).filter(Boolean);
+}
+
 function Field({ label, value, pre }: { label: string; value?: React.ReactNode; pre?: boolean }) {
   return (
     <div>
@@ -458,7 +503,7 @@ function Field({ label, value, pre }: { label: string; value?: React.ReactNode; 
   );
 }
 
-const SOURCE_CHANNELS = ['email', 'phone', 'internal_testing', 'supplier', 'other'];
+const SOURCE_CHANNELS = ['email', 'phone', 'internal_testing', 'supplier', 'threat_intelligence', 'other'];
 
 // Edit the intake/receipt details after logging. Only case-metadata fields
 // are editable here — workflow state (CVSS, classification, stage) is driven
@@ -507,8 +552,16 @@ function IntakeEditor({ form, setForm, saving, onSave, onCancel }: any) {
           <input className="input" value={form.reporterName} onChange={e => set('reporterName', e.target.value)} placeholder="Researcher / reporter name" />
         </div>
         <div>
-          <label className="label">Reporter Contact</label>
-          <input className="input" value={form.reporterContact} onChange={e => set('reporterContact', e.target.value)} placeholder="Email or phone" />
+          <label className="label">Contact Email</label>
+          <input className="input" type="email" value={form.reporterEmail} onChange={e => set('reporterEmail', e.target.value)} placeholder="name@example.com" />
+        </div>
+        <div>
+          <label className="label">Phone Number</label>
+          <input className="input" value={form.reporterPhone} onChange={e => set('reporterPhone', e.target.value)} placeholder="+49 …" />
+        </div>
+        <div>
+          <label className="label">Postal Address</label>
+          <input className="input" value={form.reporterAddress} onChange={e => set('reporterAddress', e.target.value)} placeholder="Location / postal address" />
         </div>
       </div>
 

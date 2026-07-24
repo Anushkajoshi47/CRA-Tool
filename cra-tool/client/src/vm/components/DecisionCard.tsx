@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { transitionTicket, updateStageData, notifyCert, resetCertNotification } from '../api/vmApi';
+import { transitionTicket, updateStageData, notifyCert, resetCertNotification, uploadAttachments } from '../api/vmApi';
 import { timeRemaining, computeDeadlines } from '../utils/clockCalculations';
 import AdvisoryForm from './AdvisoryForm';
-import CvssCalculator from './CvssCalculator';
 import ConfirmDialog from '../../shared/ConfirmDialog';
 import { ClassificationBadge, ClassDot } from './StatusBadge';
 import { stageLabel } from '../utils/lifecycleConfig';
+import { TIMEZONES, getTimezone, toZonedInput, zonedInputToISO, fmtDateTime, useTimeFmt } from '../../shared/timezone';
 import type { Cvss } from '../../types';
 
 // The workflow-engine surface: one card, one decision per stage. Always
@@ -22,7 +22,7 @@ const STAGE_META: Record<string, { requires: string; next: string }> = {
     next: 'Verification — CVSS assessment and exploitability decision.',
   },
   verification: {
-    requires: 'Complete the CVSS base score, then decide: is the vulnerability exploitable? If yes, classify it — the classification sets priority and reporting obligations for the rest of the lifecycle.',
+    requires: 'Decide whether the vulnerability is exploitable or actively exploitable in the product\'s intended use, record your observations and a CVSS base score (per FIRST.org), then assess the risk. The verdict sets priority and reporting obligations for the rest of the lifecycle.',
     next: 'Remediation — document root cause, method, and fix.',
   },
   remediation: {
@@ -50,19 +50,25 @@ const CLOSE_OUTCOME: Record<string, { title: string; desc: string; color: string
 };
 
 export default function DecisionCard({ ticket, reports, advisory, onChanged, gotoReports }: any) {
+  const fmt = useTimeFmt();
   const [note, setNote]       = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
   const [pending, setPending] = useState<any>(null);   // decision awaiting confirmation
 
-  // Verification-stage local state
+  // Verification-stage local state.
+  //   verdict → the exploitability decision picked in Step 1
+  //   cvss    → CVSS base score entered by hand (no calculator widget)
   const [cvss, setCvss] = useState<Cvss | null>(ticket.cvss?.score != null ? (ticket.cvss as Cvss) : null);
-  const [exploitable, setExploitable] = useState<'yes' | 'no' | null>(null);
+  const [verdict, setVerdict] = useState<'exploitable' | 'actively_exploitable' | 'not_exploitable' | null>(null);
 
   // Stage documentation local state (saved via stage-data, not transitions)
   const [rem, setRem]   = useState({ rootCause: '', method: '', fixDescription: '', workaround: '', ...ticket.remediation });
   const [checks, setChecks] = useState({ workMethodDefined: false, patchAvailable: false, productListAvailable: false, ...ticket.advisoryChecks });
   const [disc, setDisc] = useState({ updateAvailable: false, updateInstructionsAvailable: false, updateUrl: '', advisoryCompleted: false, ...ticket.disclosure });
+  const [receipt, setReceipt] = useState({ researcherNotified: false, researcherNotifiedAt: '', ...ticket.receipt });
+  const [valid, setValid]     = useState({ researcherNotified: false, researcherNotifiedAt: '', ...ticket.validation });
+  const [verif, setVerif]     = useState({ observations: '', attachmentLink: '', riskLevel: '', ...ticket.verification });
   const [saved, setSaved] = useState('');
 
   const meta = STAGE_META[ticket.status];
@@ -100,6 +106,36 @@ export default function DecisionCard({ ticket, reports, advisory, onChanged, got
       if (err.response?.status === 409) onChanged();
     }
   }
+
+  async function uploadStageFiles(list: FileList | null) {
+    if (!list?.length) return;
+    setError('');
+    try { await uploadAttachments(ticket._id, Array.from(list)); setSaved('Attachment uploaded.'); onChanged(); }
+    catch (err: any) { setError(err.response?.data?.message || 'Upload failed'); }
+  }
+
+  // Leave verification: persist the assessment (observations, risk, evidence
+  // link), then transition. A not-exploitable verdict closes the case (VEX);
+  // exploitable / actively-exploitable carry the classification into remediation.
+  const proceedVerification = () => run(async () => {
+    await updateStageData(ticket._id, { verification: verif, expectedUpdatedAt: ticket.updatedAt });
+    if (verdict === 'not_exploitable') {
+      await transitionTicket(ticket._id, { toStatus: 'closed', note, cvss });
+    } else {
+      await transitionTicket(ticket._id, { toStatus: 'remediation', note, classification: verdict, cvss });
+    }
+  });
+
+  // Manual CVSS entry — no calculator. The base score maps to a FIRST.org
+  // qualitative severity band; the vector, if provided, is kept as free text.
+  const setScore = (raw: string) => {
+    if (raw.trim() === '') { setCvss(cvss?.vector ? { ...cvss, score: undefined as any, severity: '' } : null); return; }
+    const n = Math.max(0, Math.min(10, Number(raw)));
+    if (Number.isNaN(n)) return;
+    setCvss({ score: n, severity: severityForScore(n), vector: cvss?.vector || '' });
+  };
+  const setVector = (raw: string) =>
+    setCvss(cvss ? { ...cvss, vector: raw } : { score: undefined as any, severity: '', vector: raw });
 
   // ── Closed: outcome card (reopenable — the workflow stays revisable) ──
   if (ticket.status === 'closed') {
@@ -189,10 +225,146 @@ export default function DecisionCard({ ticket, reports, advisory, onChanged, got
 
       {/* ── Stage-specific surface ── */}
 
+      {ticket.status === 'receipt' && (
+        <>
+          <div className="section-label" style={{ marginBottom: 8 }}>Receipt checklist</div>
+          <NotifyBlock
+            label="Acknowledgement sent to the researcher upon receipt?"
+            state={receipt}
+            onChange={setReceipt}
+            onUpload={uploadStageFiles}
+            onSave={() => saveStage({ receipt }, 'Receipt acknowledgement saved.')}
+          />
+        </>
+      )}
+
+      {ticket.status === 'validation' && (
+        <>
+          <div className="section-label" style={{ marginBottom: 8 }}>Validation checklist</div>
+          <NotifyBlock
+            label="Researcher informed the report is valid?"
+            state={valid}
+            onChange={setValid}
+            onUpload={uploadStageFiles}
+            onSave={() => saveStage({ validation: valid }, 'Validation notification saved.')}
+          />
+        </>
+      )}
+
       {ticket.status === 'verification' && (
-        <div style={{ marginBottom: 16, padding: '14px 16px', background: 'var(--card-hi)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-          <div className="section-label" style={{ marginBottom: 12 }}>Step 1 — CVSS 3.1 Base Score</div>
-          <CvssCalculator initialVector={ticket.cvss?.vector} onChange={setCvss} />
+        <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {ticket.affectedProducts?.length > 1 && (
+            <div style={{ fontSize: 11.5, color: 'var(--text-2)', lineHeight: 1.55, padding: '8px 12px', background: 'var(--amber-dim)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 'var(--radius-sm)' }}>
+              Multiple products affected — assess exploitability and risk <strong>per product</strong>:{' '}
+              {ticket.affectedProducts.map((p: any) => [p.name, p.version].filter(Boolean).join(' ')).join(' · ')}
+            </div>
+          )}
+
+          {/* Step 1 — the exploitability verdict comes first */}
+          <div>
+            <div className="section-label" style={{ marginBottom: 6 }}>Step 1 — Exploitability</div>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '0 0 10px', lineHeight: 1.6 }}>
+              Is the vulnerability exploitable, or <strong>actively</strong> exploitable, in the product's practical intended use?
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {([
+                { key: 'exploitable',          label: 'Exploitable',          c: '#f59e0b' },
+                { key: 'actively_exploitable', label: 'Actively exploitable',  c: '#f87171' },
+                { key: 'not_exploitable',      label: 'Not exploitable',       c: '#00e676' },
+              ] as const).map(o => (
+                <button key={o.key} type="button" className="btn btn-sm" disabled={loading}
+                  onClick={() => setVerdict(o.key)}
+                  style={{
+                    border: `1px solid ${verdict === o.key ? o.c : 'var(--border)'}`,
+                    background: verdict === o.key ? `color-mix(in srgb, ${o.c} 14%, transparent)` : 'transparent',
+                    color: verdict === o.key ? o.c : 'var(--text-2)', fontWeight: 700,
+                  }}>
+                  {o.key !== 'not_exploitable' && <ClassDot classification={o.key} size={8} />}
+                  <span style={{ marginLeft: o.key !== 'not_exploitable' ? 6 : 0 }}>{o.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Step 2 — observations + evidence */}
+          <div style={{ padding: '14px 16px', background: 'var(--card-hi)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+            <div className="section-label" style={{ marginBottom: 10 }}>Step 2 — Observations &amp; evidence</div>
+            <label className="label">Observations</label>
+            <textarea className="input" rows={3} value={verif.observations || ''} onChange={e => setVerif({ ...verif, observations: e.target.value })}
+              placeholder="Affected components, attack scenario, exploitability reasoning per product…" style={{ resize: 'vertical', marginBottom: 12 }} />
+            <label className="label">Attachment link (evidence)</label>
+            <input className="input" value={verif.attachmentLink || ''} onChange={e => setVerif({ ...verif, attachmentLink: e.target.value })}
+              placeholder="https://… (advisory, PoC, TRA)" />
+            <div style={{ marginTop: 12 }}>
+              <label className="label" style={{ marginBottom: 6 }}>Or upload a file (PDF / screenshot)</label>
+              {ticket.attachments?.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
+                  {ticket.attachments.map((a: any) => (
+                    <div key={a._id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                      <span className="mono" style={{ fontSize: 9, color: 'var(--text-3)' }}>{a.mimeType === 'application/pdf' ? 'PDF' : 'IMG'}</span>
+                      <span style={{ color: 'var(--text)' }}>{a.originalName}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer', display: 'inline-block' }}>
+                + Upload PDF / screenshot
+                <input type="file" multiple accept=".pdf,image/png,image/jpeg,image/gif,image/webp" style={{ display: 'none' }}
+                  onChange={e => { uploadStageFiles(e.target.files); e.target.value = ''; }} />
+              </label>
+            </div>
+          </div>
+
+          {/* Step 3 — CVSS base score, entered by hand */}
+          <div style={{ padding: '14px 16px', background: 'var(--card-hi)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+            <div className="section-label" style={{ marginBottom: 8 }}>Step 3 — CVSS base score</div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div style={{ width: 120 }}>
+                <label className="label">Base score (0–10)</label>
+                <input className="input" type="number" min={0} max={10} step={0.1}
+                  value={cvss?.score ?? ''} onChange={e => setScore(e.target.value)} placeholder="e.g. 8.8" />
+              </div>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <label className="label">Vector (optional)</label>
+                <input className="input mono" style={{ fontSize: 11 }} value={cvss?.vector || ''} onChange={e => setVector(e.target.value)}
+                  placeholder="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" />
+              </div>
+              {cvss?.score != null && cvss.score !== ('' as any) && (
+                <span className="mono" style={{ fontSize: 11, fontWeight: 800, color: severityColor(cvss.severity), whiteSpace: 'nowrap', paddingBottom: 8 }}>
+                  {cvss.severity}
+                </span>
+              )}
+            </div>
+            <a href="https://www.first.org/cvss/calculator/3.1" target="_blank" rel="noopener noreferrer"
+              style={{ display: 'inline-block', marginTop: 8, fontSize: 11.5, color: 'var(--accent)' }}>
+              Open the FIRST.org CVSS 3.1 calculator ↗
+            </a>
+          </div>
+
+          {/* Step 4 — risk assessment from the CVSS severity band */}
+          <div>
+            <div className="section-label" style={{ marginBottom: 8 }}>Step 4 — Risk assessment</div>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '0 0 8px', lineHeight: 1.6 }}>
+              Assess the risk using the CVSS qualitative severity scale
+              {cvss?.severity ? <> — the entered score maps to <strong style={{ color: severityColor(cvss.severity) }}>{cvss.severity}</strong></> : null}.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <label className="label" style={{ margin: 0 }}>Risk level</label>
+              <select className="input" style={{ width: 200 }} value={verif.riskLevel || ''} onChange={e => setVerif({ ...verif, riskLevel: e.target.value })}>
+                <option value="">— select —</option>
+                {['Low', 'Medium', 'High', 'Critical'].map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              {cvss?.severity && ['Low', 'Medium', 'High', 'Critical'].includes(cvss.severity) && verif.riskLevel !== cvss.severity && (
+                <button type="button" className="btn btn-ghost btn-xs" onClick={() => setVerif({ ...verif, riskLevel: cvss.severity })}>
+                  Use CVSS severity ({cvss.severity})
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => saveStage({ verification: verif, cvss }, 'Verification assessment saved.')}>Save Assessment</button>
+          </div>
         </div>
       )}
 
@@ -262,7 +434,7 @@ export default function DecisionCard({ ticket, reports, advisory, onChanged, got
             {ticket.certNotifiedAt ? (
               <>
                 <span style={{ fontSize: 12, color: 'var(--success)', fontWeight: 700 }}>
-                  ✓ CERT notified — {new Date(ticket.certNotifiedAt).toLocaleString()}
+                  ✓ CERT notified — {fmt.dateTime(ticket.certNotifiedAt)}
                 </span>
                 <button
                   className="btn btn-ghost btn-xs"
@@ -355,7 +527,7 @@ export default function DecisionCard({ ticket, reports, advisory, onChanged, got
         {({
           receipt:      'Ready to start validation?',
           validation:   'Is this a valid vulnerability report per the CVD policy?',
-          verification: 'Step 2 — Is the vulnerability exploitable?',
+          verification: 'Confirm the verification verdict.',
           remediation:  'Remediation documented — continue to Advisory?',
           advisory:     'CERT notified — continue to Disclosure?',
           disclosure:   isActive ? 'Disclosure complete — continue to Reporting?' : 'Disclosure complete — close the case?',
@@ -383,76 +555,30 @@ export default function DecisionCard({ ticket, reports, advisory, onChanged, got
         )}
 
         {ticket.status === 'verification' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button
-                className="btn btn-sm"
-                disabled={loading || !cvss}
-                title={!cvss ? 'Complete the CVSS score first' : undefined}
-                style={{
-                  border: `1px solid ${exploitable === 'yes' ? 'var(--accent)' : 'var(--border)'}`,
-                  background: exploitable === 'yes' ? 'var(--accent-dim)' : 'transparent',
-                  color: exploitable === 'yes' ? 'var(--accent)' : 'var(--text-2)', fontWeight: 700,
-                }}
-                onClick={() => setExploitable('yes')}
-              >
-                Yes — exploitable
-              </button>
-              <button
-                className="btn btn-sm"
-                disabled={loading || !cvss}
-                title={!cvss ? 'Complete the CVSS score first' : undefined}
-                style={{
-                  border: `1px solid ${exploitable === 'no' ? '#f87171' : 'var(--border)'}`,
-                  background: exploitable === 'no' ? 'rgba(248,113,113,0.1)' : 'transparent',
-                  color: exploitable === 'no' ? '#f87171' : 'var(--text-2)', fontWeight: 700,
-                }}
-                onClick={() => setExploitable('no')}
-              >
-                No — not exploitable
-              </button>
-            </div>
-
-            {exploitable === 'no' && (
-              <div>
-                <button className="btn btn-danger btn-sm" disabled={loading}
-                  onClick={() => setPending({ label: 'Not Exploitable — Close Case (VEX)', action: () => decide('closed', { cvss }) })}>
-                  Close Case (VEX) →
-                </button>
-              </div>
-            )}
-
-            {exploitable === 'yes' && (
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>
-                  Step 3 — Classify the vulnerability
-                </div>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button
-                    className="btn btn-sm"
-                    disabled={loading}
-                    style={{ background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.5)', color: '#f87171', fontWeight: 700 }}
-                    onClick={() => setPending({
-                      label: 'Actively Exploitable (starts CRA timers)', danger: true,
-                      action: () => decide('remediation', { classification: 'actively_exploitable', cvss }),
-                    })}
-                  >
-                    <ClassDot classification="actively_exploitable" size={8} />
-                    <span style={{ marginLeft: 6 }}>Actively Exploitable</span>
-                  </button>
-                  <button
-                    className="btn btn-sm"
-                    disabled={loading}
-                    style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.45)', color: '#f59e0b', fontWeight: 700 }}
-                    onClick={() => decide('remediation', { classification: 'exploitable', cvss })}
-                  >
-                    <ClassDot classification="exploitable" size={8} />
-                    <span style={{ marginLeft: 6 }}>Exploitable</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          verdict == null ? (
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+              Pick the exploitability verdict in Step 1 above to continue.
+            </span>
+          ) : verdict === 'not_exploitable' ? (
+            <button className="btn btn-danger btn-sm" disabled={loading}
+              onClick={() => setPending({ label: 'Not Exploitable — Close Case (VEX)', action: proceedVerification })}>
+              Close Case (VEX) →
+            </button>
+          ) : verdict === 'actively_exploitable' ? (
+            <button className="btn btn-sm" disabled={loading}
+              style={{ background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.5)', color: '#f87171', fontWeight: 700 }}
+              onClick={() => setPending({ label: 'Actively Exploitable (starts CRA timers)', danger: true, action: proceedVerification })}>
+              <ClassDot classification="actively_exploitable" size={8} />
+              <span style={{ marginLeft: 6 }}>Confirm Actively Exploitable → Remediation</span>
+            </button>
+          ) : (
+            <button className="btn btn-sm" disabled={loading}
+              style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.45)', color: '#f59e0b', fontWeight: 700 }}
+              onClick={proceedVerification}>
+              <ClassDot classification="exploitable" size={8} />
+              <span style={{ marginLeft: 6 }}>Confirm Exploitable → Remediation</span>
+            </button>
+          )
         )}
 
         {ticket.status === 'remediation' && (
@@ -524,6 +650,76 @@ export default function DecisionCard({ ticket, reports, advisory, onChanged, got
         onConfirm={() => pending.action()}
         onCancel={() => setPending(null)}
       />
+    </div>
+  );
+}
+
+/* ── CVSS helpers (FIRST.org 3.1 qualitative severity rating scale) ── */
+// https://www.first.org/cvss/specification-document#Qualitative-Severity-Rating-Scale
+function severityForScore(score: number): string {
+  if (Number.isNaN(score)) return '';
+  if (score === 0)  return 'None';
+  if (score < 4)    return 'Low';
+  if (score < 7)    return 'Medium';
+  if (score < 9)    return 'High';
+  return 'Critical';
+}
+function severityColor(severity?: string): string {
+  switch (severity) {
+    case 'Critical': return '#f87171';
+    case 'High':     return '#f59e0b';
+    case 'Medium':   return '#fbbf24';
+    case 'Low':      return '#00e676';
+    default:         return 'var(--text-2)';
+  }
+}
+
+
+/* ── Researcher-notification block (Receipt & Validation) ─────── */
+function NotifyBlock({ label, state, onChange, onUpload, onSave }: {
+  label: string; state: any; onChange: (s: any) => void;
+  onUpload: (l: FileList | null) => void; onSave: () => void;
+}) {
+  // Which zone the officer enters the time in (defaults to German time).
+  const [tz, setTz] = useState(getTimezone());
+  return (
+    <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 16px', background: 'var(--card-hi)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+      <YesNo
+        label={label}
+        value={!!state.researcherNotified}
+        onChange={v => onChange({ ...state, researcherNotified: v, researcherNotifiedAt: v && !state.researcherNotifiedAt ? new Date().toISOString() : state.researcherNotifiedAt })}
+      />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <label className="label" style={{ margin: 0, minWidth: 120 }}>Notification date &amp; time</label>
+        <input className="input" type="datetime-local" style={{ width: 210 }}
+          value={toZonedInput(state.researcherNotifiedAt, tz)}
+          onChange={e => onChange({ ...state, researcherNotifiedAt: zonedInputToISO(e.target.value, tz) })} />
+        <select className="input" style={{ width: 130 }} value={tz} onChange={e => setTz(e.target.value)} title="Enter the time in this zone">
+          {TIMEZONES.map(z => <option key={z.id} value={z.id}>{z.label}</option>)}
+        </select>
+        <button type="button" className="btn btn-ghost btn-xs"
+          onClick={() => onChange({ ...state, researcherNotifiedAt: new Date().toISOString() })}>
+          Now
+        </button>
+      </div>
+      {state.researcherNotifiedAt && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {TIMEZONES.map(z => (
+            <div key={z.id} className="mono" style={{ fontSize: 10.5, color: z.id === tz ? 'var(--text-2)' : 'var(--text-3)' }}>
+              <span style={{ display: 'inline-block', minWidth: 84, color: 'var(--text-3)' }}>{z.label}</span>
+              {fmtDateTime(state.researcherNotifiedAt, z.id)}
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <label className="btn btn-ghost btn-xs" style={{ cursor: 'pointer' }}>
+          + Attach screenshot
+          <input type="file" multiple accept=".pdf,image/png,image/jpeg,image/gif,image/webp" style={{ display: 'none' }}
+            onChange={e => { onUpload(e.target.files); e.target.value = ''; }} />
+        </label>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onSave}>Save</button>
+      </div>
     </div>
   );
 }

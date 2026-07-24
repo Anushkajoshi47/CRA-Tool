@@ -42,7 +42,35 @@ export interface DisclosureData {
   advisoryCompleted?: boolean;
 }
 
-export type SourceChannel = 'email' | 'phone' | 'internal_testing' | 'supplier' | 'other';
+// Researcher acknowledgement at receipt / validation (CVD policy)
+export interface NotifyStage {
+  researcherNotified?: boolean;
+  researcherNotifiedAt?: string | null;
+}
+
+export interface VerificationDoc {
+  observations?: string;
+  attachmentLink?: string;
+  riskLevel?: string;   // Low | Moderate | High | Critical
+}
+
+export interface Attachment {
+  _id: string;
+  originalName: string;
+  filename: string;
+  mimeType?: string;
+  size?: number;
+  uploadedByName?: string;
+  uploadedAt: string;
+}
+
+export interface Reference {
+  _id?: string;
+  label?: string;
+  url?: string;
+}
+
+export type SourceChannel = 'email' | 'phone' | 'internal_testing' | 'supplier' | 'threat_intelligence' | 'other';
 
 export interface AffectedProduct {
   name: string;
@@ -56,7 +84,10 @@ export interface Ticket {
   title?: string;
   description: string;
   reporterName?: string;
-  reporterContact?: string;
+  reporterContact?: string;   // legacy single contact field (pre-split cases)
+  reporterEmail?: string;
+  reporterPhone?: string;
+  reporterAddress?: string;
   affectedProducts: AffectedProduct[];
   environment?: string;
   sourceChannel: SourceChannel;
@@ -64,9 +95,14 @@ export interface Ticket {
   status: TicketStatus;
   classification?: Classification | null;
   closedReason?: ClosedReason | null;
+  receipt?: NotifyStage;
+  validation?: NotifyStage;
+  verification?: VerificationDoc;
   cvss?: Partial<Cvss> | null;
   remediation?: RemediationDoc;
   advisoryChecks?: AdvisoryChecks;
+  attachments?: Attachment[];
+  references?: Reference[];
   certNotifiedAt?: string | null;
   disclosure?: DisclosureData;
   isIncident: boolean;

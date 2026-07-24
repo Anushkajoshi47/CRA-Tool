@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import StatusBadge from './StatusBadge';
 import { addComment } from '../api/vmApi';
+import { useTimeFmt, zoneLabel } from '../../shared/timezone';
 import { Stack, Row } from '../../components/primitives/layout';
 import s from './Timeline.module.css';
 
@@ -27,16 +28,6 @@ const TYPE_META: Record<string, { label: string; color: string }> = {
   comment:    { label: 'Comment',    color: '#818cf8' },
 };
 
-const viewerZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-function formatLocal(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-    timeZoneName: 'short',
-  });
-}
-
 function formatUtc(iso: string) {
   return new Date(iso).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 }
@@ -46,6 +37,7 @@ export default function Timeline({ ticketId, activity, onChanged }: {
   activity: any[];
   onChanged: () => void;
 }) {
+  const fmt = useTimeFmt();
   const [comment, setComment] = useState('');
   const [posting, setPosting] = useState(false);
   const [error, setError]     = useState('');
@@ -87,7 +79,7 @@ export default function Timeline({ ticketId, activity, onChanged }: {
         </Row>
         {error && <div className={s.error}>{error}</div>}
         <div className={s.tzNote}>
-          Times shown in your timezone — {viewerZone}. Hover any timestamp for UTC.
+          Times shown in {zoneLabel(fmt.tz)} — change in Settings. Hover any timestamp for UTC.
         </div>
       </Stack>
 
@@ -108,7 +100,7 @@ export default function Timeline({ ticketId, activity, onChanged }: {
                   <span className={s.actor}>{a.actorName || 'System'}</span>
                   {a.actorOrg && <span className={s.actorOrg}>· {a.actorOrg}</span>}
                   <span className={`mono ${s.time}`} title={formatUtc(a.createdAt)}>
-                    {formatLocal(a.createdAt)}
+                    {fmt.dateTime(a.createdAt)}
                   </span>
                 </Row>
 

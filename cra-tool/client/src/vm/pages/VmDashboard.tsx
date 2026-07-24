@@ -6,6 +6,7 @@ import { SEVERITY_COLOR } from '../components/CvssCalculator';
 import { computeDeadlines, timeRemaining } from '../utils/clockCalculations';
 import { PHASES, phaseOf } from '../utils/flowPhases';
 import { stageLabel } from '../utils/lifecycleConfig';
+import { useTimeFmt, fmtDate } from '../../shared/timezone';
 import LifecycleJourney from '../components/LifecycleJourney';
 import { Stack, Row, Grid } from '../../components/primitives/layout';
 import s from './VmDashboard.module.css';
@@ -14,6 +15,7 @@ import s from './VmDashboard.module.css';
 // VmDashboard.module.css, dynamic accents via the `--c` custom property.
 
 export default function VmDashboard() {
+  const fmt = useTimeFmt();
   const [tickets, setTickets]       = useState<any[]>([]);
   const [advisories, setAdvisories] = useState<any[]>([]);
   const [feed, setFeed]             = useState<any[]>([]);
@@ -119,7 +121,7 @@ export default function VmDashboard() {
                   <span className={s.feedDot} style={{ ['--c' as any]: FEED_COLOR[a.type], alignSelf: 'center' }} />
                   <span className={s.feedTicket}>{a.ticketNumber || '—'}</span>
                   <span className={s.feedActor}>{a.actorName}</span>
-                  <span className={`mono ${s.feedTime}`} title={new Date(a.createdAt).toLocaleString()}>{timeAgo(a.createdAt)}</span>
+                  <span className={`mono ${s.feedTime}`} title={fmt.dateTime(a.createdAt)}>{timeAgo(a.createdAt)}</span>
                 </Row>
                 <div className={s.feedAction}>{a.action}{a.decision ? ` — ${a.decision}` : ''}</div>
               </Link>
@@ -138,7 +140,7 @@ export default function VmDashboard() {
                   <Row gap={3}>
                     <span className={s.recentNo}>{t.ticketNumber}</span>
                     <StatusBadge status={t.status} />
-                    <span className={s.recentDate}>{new Date(t.updatedAt || t.createdAt).toLocaleDateString()}</span>
+                    <span className={s.recentDate}>{fmt.date(t.updatedAt || t.createdAt)}</span>
                   </Row>
                   <div className={s.recentDesc}>{t.title || t.description}</div>
                 </Link>
@@ -164,7 +166,7 @@ function timeAgo(iso: string) {
   if (sec < 3600)   return `${Math.floor(sec / 60)}m ago`;
   if (sec < 86400)  return `${Math.floor(sec / 3600)}h ago`;
   if (sec < 604800) return `${Math.floor(sec / 86400)}d ago`;
-  return new Date(iso).toLocaleDateString();
+  return fmtDate(iso);
 }
 
 /* ── Priority queue card ─────────────────────────────────────── */
